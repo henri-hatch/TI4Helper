@@ -1,3 +1,4 @@
+// src/index.ts
 import express from 'express';
 import http from 'http';
 import { Server as SocketIOServer } from 'socket.io';
@@ -9,23 +10,35 @@ import { initializeDatabase } from './models/database';
 const app = express();
 const server = http.createServer(app);
 const io = new SocketIOServer(server, {
-    cors: {
-        origin: '*',
-        methods: ['GET', 'POST']
-    }
+  cors: {
+    origin: '*', // Adjust for production
+    methods: ['GET', 'POST']
+  }
 });
 
 // Middleware
 app.use(cors());
 app.use(express.json());
 
-initializeDatabase();
+// Make io accessible to routes
+app.set('io', io);
 
-setupRoutes(app);
+// Initialize Database and then set up routes and sockets
+initializeDatabase()
+  .then(() => {
+    // Routes
+    setupRoutes(app);
 
-setupSockets(io);
+    // Sockets
+    setupSockets(io);
 
-const PORT = process.env.PORT || 5000;
-server.listen(PORT, () => {
-    console.log(`Server is running on port ${PORT}`);
-});
+    // Start Server
+    const PORT = process.env.PORT || 5000;
+    server.listen(PORT, () => {
+      console.log(`Server is running on http://localhost:${PORT}`);
+    });
+  })
+  .catch((error) => {
+    console.error('Failed to initialize database:', error);
+    process.exit(1);
+  });
