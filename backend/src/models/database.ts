@@ -10,10 +10,11 @@ export const initializeDatabase = async () => {
     driver: sqlite3.Database,
   });
 
-  // Create tables with victoryPoints column
+  // Create tables with victoryPoints and unique playerId
   await db.exec(`
     CREATE TABLE IF NOT EXISTS players (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
+      playerId TEXT UNIQUE NOT NULL,
       name TEXT NOT NULL,
       resources INTEGER DEFAULT 0,
       influence INTEGER DEFAULT 0,

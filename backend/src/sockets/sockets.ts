@@ -4,8 +4,9 @@ export const setupSockets = (io: Server) => {
     io.on('connection', (socket) => {
         console.log('A player connected:', socket.id);
 
-        // Example: Broadcast victory points updates
+        // Optional: Listen for client-initiated events if needed
         socket.on('update-victory-points', (data) => {
+            console.log('Received update-victory-points from client:', data);
             io.emit('victory-points-updated', data);
         });
 

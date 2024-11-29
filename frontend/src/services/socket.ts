@@ -1,15 +1,19 @@
-import { io, Socket } from 'socket.io-client';
+// frontend/src/services/socket.ts
+import { io } from 'socket.io-client';
 
-const socket: Socket = io('http://localhost:5000');
+const SOCKET_SERVER_URL = 'http://localhost:5000'; // Update if different
 
-// Example: Listen for victory point updates
-socket.on('victory-points-updated', (data) => {
-    console.log('Victory points updated:', data);
+const socket = io(SOCKET_SERVER_URL, {
+  transports: ['websocket'], // Optional: Specify transport to ensure WebSocket is used
+  autoConnect: true,
+});
+
+socket.on('connect', () => {
+  console.log('Connected to Socket.io server:', socket.id);
+});
+
+socket.on('connect_error', (err) => {
+  console.error('Socket connection error:', err);
 });
 
 export default socket;
-
-// Example: Emit a victory point update
-export const updateVictoryPoints = (data: { playerId: number, points: number }) => {
-    socket.emit('update-victory-points', data);
-};

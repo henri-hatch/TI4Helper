@@ -3,12 +3,14 @@
 // Represents a player in the game
 export interface Player {
     id: number;
+    playerId: string;
     name: string;
     resources: number;
     influence: number;
     commodities: number;
     tradeGoods: number;
     planets: Planet[];
+    victoryPoints: number;
   }
   
   // Represents a planet owned by a player
@@ -33,6 +35,10 @@ export interface Player {
   export interface GameState {
     players: Player[];
     objectives: Objective[];
-    victoryPoints: Record<number, number>; // Player ID -> Victory Points
+    victoryPoints: Record<string, number>; // Player ID (string) -> Victory Points (number)
   }
   
+  export interface PlayerJoinResponse {
+    playerId: string;
+    name: string;
+  }
