@@ -58,14 +58,14 @@ export const setupRoutes = (app: Application) => {
 
       // Fetch the updated victory points
       const updatedPlayer = await db.get(`SELECT victoryPoints FROM players WHERE playerId = ?`, playerId);
-      const updatedPoints: Record<string, number> = {
+      const updatedPointsRecord: Record<string, number> = {
         [playerId]: updatedPlayer.victoryPoints,
       };
 
       // Emit the update via Socket.io
       const io: Server = req.app.get('io');
-      io.emit('victory-points-updated', updatedPoints);
-      console.log('Emitted victory-points-updated:', updatedPoints);
+      io.emit('victory-points-updated', updatedPointsRecord);
+      console.log('Emitted victory-points-updated:', updatedPointsRecord);
 
       res.status(200).send({ message: `Victory points updated for player ${playerId}` });
     } catch (error) {
@@ -85,15 +85,23 @@ export const setupRoutes = (app: Application) => {
     }
 
     const playerId = uuidv4();
+    const trimmedName = name.trim();
 
     try {
       const db = getDatabase();
+
+      // Check if player name already exists
+      const existingPlayer = await db.get(`SELECT * FROM players WHERE name = ?`, trimmedName);
+      if (existingPlayer) {
+        res.status(409).send({ error: 'Player name already exists' });
+        return;
+      }
 
       // Insert new player
       await db.run(
         `INSERT INTO players (playerId, name) VALUES (?, ?)`,
         playerId,
-        name.trim()
+        trimmedName
       );
 
       // Initialize victoryPoints to 0
@@ -102,25 +110,28 @@ export const setupRoutes = (app: Application) => {
         playerId
       );
 
-      // Emit updated victory points
-      const io: Server = req.app.get('io');
-      io.emit('victory-points-updated', { [playerId]: 0 });
-      console.log('Emitted victory-points-updated for new player:', { [playerId]: 0 });
+      // Fetch the newly created player data
+      const newPlayer = await db.get(`SELECT * FROM players WHERE playerId = ?`, playerId);
 
-      res.status(201).json({ playerId, name: name.trim() });
+      // Emit the 'player-joined' event with the new player's data
+      const io: Server = req.app.get('io');
+      io.emit('player-joined', newPlayer);
+      console.log('Emitted player-joined:', newPlayer);
+
+      res.status(201).json({ playerId, name: trimmedName });
     } catch (error) {
       console.error('Error registering player:', error);
       if ((error as any).code === 'SQLITE_CONSTRAINT') {
         res.status(409).send({ error: 'Player name already exists' });
-        return;
+      } else {
+        res.status(500).send({ error: 'Failed to register player' });
       }
-      res.status(500).send({ error: 'Failed to register player' });
     }
   };
 
-// Register routes
-app.get('/api/health', healthCheck);
-app.get('/api/game-state', fetchGameState);
-app.post('/api/victory-points/update', updateVictoryPoints);
-app.post('/api/player/join', registerPlayer); // New route
+  // Register routes
+  app.get('/api/health', healthCheck);
+  app.get('/api/game-state', fetchGameState);
+  app.post('/api/victory-points/update', updateVictoryPoints);
+  app.post('/api/player/join', registerPlayer);
 };

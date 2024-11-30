@@ -1,8 +1,9 @@
 // src/contexts/GameContext.tsx
 import React, { createContext, useState, useEffect, ReactNode } from 'react';
-import { GameState, PlayerJoinResponse } from '../types';
+import { GameState, PlayerJoinResponse, Player } from '../types';
 import { fetchGameState, joinGame } from '../services/api';
 import socket from '../services/socket';
+import axios from 'axios'; // Ensure axios is imported
 
 interface GameContextType {
   gameState: GameState | null;
@@ -72,12 +73,40 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
       });
     };
 
-    // Listen for 'victory-points-updated' events
-    socket.on('victory-points-updated', handleVictoryPointsUpdated);
+    const handlePlayerJoined = (newPlayer: Player) => {
+      console.log('Received player-joined event:', newPlayer);
+      setGameState((prevState) => {
+        if (prevState) {
+          // Check if player already exists to prevent duplicates
+          const playerExists = prevState.players.some(p => p.playerId === newPlayer.playerId);
+          if (playerExists) return prevState;
 
-    // Clean up the socket listener on unmount
+          // Add the new player to the players array
+          const updatedPlayers = [...prevState.players, newPlayer];
+
+          // Update victoryPoints mapping
+          const updatedVictoryPoints = { ...prevState.victoryPoints, [newPlayer.playerId]: newPlayer.victoryPoints };
+
+          const updatedGameState: GameState = {
+            ...prevState,
+            players: updatedPlayers,
+            victoryPoints: updatedVictoryPoints,
+          };
+
+          console.log('Updated GameState with new player:', updatedGameState);
+          return updatedGameState;
+        }
+        return prevState;
+      });
+    };
+
+    socket.on('victory-points-updated', handleVictoryPointsUpdated);
+    socket.on('player-joined', handlePlayerJoined); // Listen for new player joins
+
+    // Clean up the socket listeners on unmount
     return () => {
       socket.off('victory-points-updated', handleVictoryPointsUpdated);
+      socket.off('player-joined', handlePlayerJoined);
     };
   }, []);
 
@@ -89,9 +118,33 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
       setPlayerName(data.name);
       localStorage.setItem('playerId', data.playerId);
       localStorage.setItem('playerName', data.name);
-    } catch (error) {
-      console.error('Error registering player:', error);
-      throw error;
+    } catch (error: any) {
+      if (axios.isAxiosError(error) && error.response?.status === 409) {
+        console.log('Player name already exists. Fetching existing player data.');
+        try {
+          const currentGameState = await fetchGameState();
+          const existingPlayer = currentGameState.players.find(
+            (player) => player.name.toLowerCase() === name.trim().toLowerCase()
+          );
+
+          if (existingPlayer) {
+            setPlayerId(existingPlayer.playerId);
+            setPlayerName(existingPlayer.name);
+            localStorage.setItem('playerId', existingPlayer.playerId);
+            localStorage.setItem('playerName', existingPlayer.name);
+            console.log('Existing player data set:', existingPlayer);
+          } else {
+            console.error('Player not found in game state.');
+            throw error;
+          }
+        } catch (fetchError) {
+          console.error('Error fetching game state:', fetchError);
+          throw fetchError;
+        }
+      } else {
+        console.error('Error registering player:', error);
+        throw error;
+      }
     }
   };
 

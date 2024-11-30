@@ -1,23 +1,21 @@
 // src/App.tsx
-import React, { useContext } from 'react';
-import { GameProvider, GameContext } from './contexts/GameContext';
-import Dashboard from './components/Dashboard/Dashboard';
-import Registration from './components/Registration/Registration';
+import React from 'react';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { GameProvider } from './contexts/GameContext';
+import HostDashboard from './components/HostDashboard';
+import PlayerDashboard from './components/PlayerDashboard';
+import Login from './components/Login';
 
-const AppContent: React.FC = () => {
-  const { playerId } = useContext(GameContext);
-
-  if (!playerId) {
-    return <Registration />;
-  }
-
-  return <Dashboard />;
-};
-
-const App = () => {
+const App: React.FC = () => {
   return (
     <GameProvider>
-      <AppContent />
+      <Router>
+        <Routes>
+          <Route path="/" element={<Login />} />
+          <Route path="/host" element={<HostDashboard />} />
+          <Route path="/player" element={<PlayerDashboard />} />
+        </Routes>
+      </Router>
     </GameProvider>
   );
 };
