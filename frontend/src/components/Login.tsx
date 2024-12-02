@@ -9,11 +9,19 @@ const Login: React.FC = () => {
   const navigate = useNavigate();
 
   const handleLogin = async () => {
-    await registerPlayer(name);
+    const trimmedName = name.trim();
+    if (!trimmedName) {
+      console.error('Player name cannot be empty.');
+      return;
+    }
+    console.log('Attempting to register player:', trimmedName);
+    await registerPlayer(trimmedName);
+    console.log('Navigating to Player Dashboard');
     navigate('/player');
   };
 
   const handleHostLogin = () => {
+    console.log('Navigating to Host Dashboard');
     navigate('/host');
   };
 
@@ -24,7 +32,11 @@ const Login: React.FC = () => {
         type="text"
         placeholder="Enter your name"
         value={name}
-        onChange={(e) => setName(e.target.value)}
+        onChange={(e) => {
+          const inputValue = e.target.value ?? '';
+          console.log('Input changed:', inputValue);
+          setName(inputValue);
+        }}
       />
       <button onClick={handleLogin} disabled={!name.trim()}>
         Join as Player

@@ -3,7 +3,19 @@ import React, { createContext, useState, useEffect, ReactNode } from 'react';
 import { GameState, PlayerJoinResponse, Player } from '../types';
 import { fetchGameState, joinGame } from '../services/api';
 import socket from '../services/socket';
-import axios from 'axios'; // Ensure axios is imported
+import axios from 'axios';
+
+// Utility function to check localStorage availability
+const isLocalStorageAvailable = (() => {
+  try {
+    const testKey = '__storage_test__';
+    localStorage.setItem(testKey, 'test');
+    localStorage.removeItem(testKey);
+    return true;
+  } catch (e) {
+    return false;
+  }
+})();
 
 interface GameContextType {
   gameState: GameState | null;
@@ -24,10 +36,16 @@ export const GameContext = createContext<GameContextType>({
 export const GameProvider = ({ children }: { children: ReactNode }) => {
   const [gameState, setGameState] = useState<GameState | null>(null);
   const [playerId, setPlayerId] = useState<string | null>(() => {
-    return localStorage.getItem('playerId');
+    if (isLocalStorageAvailable) {
+      return localStorage.getItem('playerId');
+    }
+    return null;
   });
   const [playerName, setPlayerName] = useState<string | null>(() => {
-    return localStorage.getItem('playerName');
+    if (isLocalStorageAvailable) {
+      return localStorage.getItem('playerName');
+    }
+    return null;
   });
 
   useEffect(() => {
@@ -49,7 +67,6 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
       console.log('Received victory-points-updated event:', updatedPoints);
       setGameState((prevState) => {
         if (prevState) {
-          // Update players' victoryPoints
           const updatedPlayers = prevState.players.map((player) => {
             if (updatedPoints[player.playerId] !== undefined) {
               return { ...player, victoryPoints: updatedPoints[player.playerId] };
@@ -57,7 +74,6 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
             return player;
           });
 
-          // Optionally update the separate victoryPoints mapping
           const updatedVictoryPoints = { ...prevState.victoryPoints, ...updatedPoints };
 
           const updatedGameState: GameState = {
@@ -111,39 +127,42 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   const registerPlayer = async (name: string) => {
+    const trimmedName = name.trim();
+    if (!trimmedName) {
+      console.error('Player name cannot be empty.');
+      return;
+    }
     try {
-      const data: PlayerJoinResponse = await joinGame(name);
+      const data: PlayerJoinResponse = await joinGame(trimmedName);
       console.log('Register player response:', data);
       setPlayerId(data.playerId);
       setPlayerName(data.name);
-      localStorage.setItem('playerId', data.playerId);
-      localStorage.setItem('playerName', data.name);
+
+      if (isLocalStorageAvailable) {
+        try {
+          localStorage.setItem('playerId', data.playerId);
+          localStorage.setItem('playerName', data.name);
+        } catch (e) {
+          console.error('Error setting localStorage:', e);
+        }
+      }
     } catch (error: any) {
       if (axios.isAxiosError(error) && error.response?.status === 409) {
-        console.log('Player name already exists. Fetching existing player data.');
-        try {
-          const currentGameState = await fetchGameState();
-          const existingPlayer = currentGameState.players.find(
-            (player) => player.name.toLowerCase() === name.trim().toLowerCase()
-          );
+        console.log('Player name already exists. Using existing player data.');
+        const existingPlayer = error.response.data.player as PlayerJoinResponse;
+        if (existingPlayer) {
+          setPlayerId(existingPlayer.playerId);
+          setPlayerName(existingPlayer.name);
 
-          if (existingPlayer) {
-            setPlayerId(existingPlayer.playerId);
-            setPlayerName(existingPlayer.name);
+          if (isLocalStorageAvailable) {
             localStorage.setItem('playerId', existingPlayer.playerId);
             localStorage.setItem('playerName', existingPlayer.name);
-            console.log('Existing player data set:', existingPlayer);
-          } else {
-            console.error('Player not found in game state.');
-            throw error;
           }
-        } catch (fetchError) {
-          console.error('Error fetching game state:', fetchError);
-          throw fetchError;
+        } else {
+          console.error('Player name exists but no player data returned.');
         }
       } else {
         console.error('Error registering player:', error);
-        throw error;
       }
     }
   };

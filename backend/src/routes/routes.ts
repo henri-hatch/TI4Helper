@@ -3,6 +3,7 @@ import { Application, RequestHandler, Request, Response } from 'express';
 import { getDatabase } from '../models/database';
 import { Server } from 'socket.io';
 import { v4 as uuidv4 } from 'uuid';
+import os from 'os';
 
 export const setupRoutes = (app: Application) => {
   // Health check route
@@ -84,7 +85,6 @@ export const setupRoutes = (app: Application) => {
       return; // Ensure the function exits
     }
 
-    const playerId = uuidv4();
     const trimmedName = name.trim();
 
     try {
@@ -93,9 +93,11 @@ export const setupRoutes = (app: Application) => {
       // Check if player name already exists
       const existingPlayer = await db.get(`SELECT * FROM players WHERE name = ?`, trimmedName);
       if (existingPlayer) {
-        res.status(409).send({ error: 'Player name already exists' });
+        res.status(409).json({ error: 'Player name already exists', player: existingPlayer });
         return;
       }
+
+      const playerId = uuidv4();
 
       // Insert new player
       await db.run(
@@ -122,11 +124,27 @@ export const setupRoutes = (app: Application) => {
     } catch (error) {
       console.error('Error registering player:', error);
       if ((error as any).code === 'SQLITE_CONSTRAINT') {
-        res.status(409).send({ error: 'Player name already exists' });
+        res.status(409).json({ error: 'Player name already exists' });
       } else {
-        res.status(500).send({ error: 'Failed to register player' });
+        res.status(500).json({ error: 'Failed to register player' });
       }
     }
+  };
+
+  // Get Local IPs
+  const getLocalIPs: RequestHandler = (req, res) => {
+    const interfaces = os.networkInterfaces();
+    const addresses: string[] = [];
+
+    for (let name of Object.keys(interfaces)) {
+      for (let iface of interfaces[name]!) {
+        if (iface.family === 'IPv4' && !iface.internal) {
+          addresses.push(iface.address);
+        }
+      }
+    }
+
+    res.status(200).json({ ips: addresses });
   };
 
   // Register routes
@@ -134,4 +152,5 @@ export const setupRoutes = (app: Application) => {
   app.get('/api/game-state', fetchGameState);
   app.post('/api/victory-points/update', updateVictoryPoints);
   app.post('/api/player/join', registerPlayer);
+  app.get('/api/get-ip', getLocalIPs);
 };

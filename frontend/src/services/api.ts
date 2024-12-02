@@ -2,9 +2,12 @@
 import axios from 'axios';
 import { GameState, PlayerJoinResponse } from '../types';
 
-// Existing API instance
+// Dynamically set the backend URL based on the current window location
+const BACKEND_PORT = '5000'; // Ensure this matches your backend's port
+const BACKEND_URL = `${window.location.protocol}//${window.location.hostname}:${BACKEND_PORT}`;
+
 const api = axios.create({
-  baseURL: 'http://localhost:5000/api',
+  baseURL: `${BACKEND_URL}/api`,
   timeout: 5000,
 });
 
@@ -25,4 +28,10 @@ export const updatePlayerResources = async (playerId: number, resources: number)
 export const joinGame = async (name: string): Promise<PlayerJoinResponse> => {
   const response = await api.post('/player/join', { name });
   return response.data;
+};
+
+// New API call to get local IPs
+export const getLocalIPs = async (): Promise<string[]> => {
+  const response = await api.get('/get-ip');
+  return response.data.ips;
 };
