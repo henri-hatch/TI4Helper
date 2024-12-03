@@ -5,6 +5,15 @@ import { Server } from 'socket.io';
 import { v4 as uuidv4 } from 'uuid';
 import os from 'os';
 
+// Define Planet interface to match the database
+interface Planet {
+  id: number;
+  name: string;
+  resources: number;
+  influence: number;
+  legendaryAbility: string;
+}
+
 export const setupRoutes = (app: Application) => {
   // Health check route
   const healthCheck: RequestHandler = (req, res) => {
@@ -15,19 +24,51 @@ export const setupRoutes = (app: Application) => {
   const fetchGameState: RequestHandler = async (req, res) => {
     try {
       const db = getDatabase();
-      const players = await db.all(`SELECT * FROM players`);
-      const objectives = await db.all(`SELECT * FROM objectives`);
-      const victoryPoints: Record<string, number> = {};
 
-      players.forEach((player: any) => {
-        victoryPoints[player.playerId] = player.victoryPoints;
+      // Fetch players with their assigned planets
+      const playersData = await db.all(`
+        SELECT p.*, pp.planetId
+        FROM players p
+        LEFT JOIN player_planets pp ON p.playerId = pp.playerId
+      `);
+
+      // Map players to include an array of planetIds
+      const playersMap: Record<string, any> = {};
+
+      playersData.forEach((p) => {
+        if (!playersMap[p.playerId]) {
+          playersMap[p.playerId] = {
+            id: p.id,
+            playerId: p.playerId,
+            name: p.name,
+            resources: p.resources,
+            influence: p.influence,
+            commodities: p.commodities,
+            tradeGoods: p.trade_goods, // Note the mapping from snake_case to camelCase
+            victoryPoints: p.victoryPoints,
+            planets: [],
+          };
+        }
+        if (p.planetId) {
+          playersMap[p.playerId].planets.push(p.planetId);
+        }
+      });
+
+      const players = Object.values(playersMap);
+
+      // Fetch objectives
+      const objectives = await db.all(`SELECT * FROM objectives`);
+
+      // Calculate victoryPoints
+      const victoryPoints: Record<string, number> = {};
+      players.forEach((p: any) => {
+        victoryPoints[p.playerId] = p.victoryPoints;
       });
 
       res.status(200).json({ players, objectives, victoryPoints });
     } catch (error) {
       console.error('Error fetching game state:', error);
       res.status(500).send({ error: 'Failed to fetch game state' });
-      return; // Ensure the function exits
     }
   };
 
@@ -38,7 +79,7 @@ export const setupRoutes = (app: Application) => {
     // Validate input
     if (typeof playerId !== 'string' || typeof points !== 'number') {
       res.status(400).send({ error: 'Invalid playerId or points' });
-      return; // Exit after sending error
+      return;
     }
 
     try {
@@ -147,10 +188,67 @@ export const setupRoutes = (app: Application) => {
     res.status(200).json({ ips: addresses });
   };
 
+  // Get All Planets
+  const getPlanets: RequestHandler = async (req, res) => {
+    try {
+      const db = getDatabase();
+      const planets = await db.all(`SELECT * FROM planets`);
+      res.status(200).json({ planets });
+    } catch (error) {
+      console.error('Error fetching planets:', error);
+      res.status(500).json({ error: 'Failed to fetch planets' });
+    }
+  };
+
+  // Assign Planets to a Player
+  const assignPlanetsToPlayer: RequestHandler = async (req, res) => {
+    const { playerId, planetIds } = req.body as { playerId: string; planetIds: number[] };
+
+    console.log('Received assignPlanetsToPlayer request:', { playerId, planetIds });
+
+    // Validate input
+    if (typeof playerId !== 'string' || !Array.isArray(planetIds)) {
+      console.error('Invalid playerId or planetIds:', { playerId, planetIds });
+      res.status(400).send({ error: 'Invalid playerId or planetIds' });
+      return;
+    }
+
+    try {
+      const db = getDatabase();
+
+      // Remove all existing planet assignments for the player
+      const deleteResult = await db.run(`DELETE FROM player_planets WHERE playerId = ?`, playerId);
+      console.log(`Deleted ${deleteResult.changes} existing planet assignments for playerId: ${playerId}`);
+
+      // Assign new planets
+      const insertPromises = planetIds.map(planetId => {
+        console.log(`Assigning planetId: ${planetId} to playerId: ${playerId}`);
+        return db.run(
+          `INSERT INTO player_planets (playerId, planetId, tapped) VALUES (?, ?, ?)`,
+          playerId,
+          planetId,
+          false
+        );
+      });
+
+      const insertResults = await Promise.all(insertPromises);
+      insertResults.forEach((result, index) => {
+        console.log(`Inserted planetId: ${planetIds[index]} for playerId: ${playerId}`);
+      });
+
+      res.status(200).send({ message: 'Planets assigned to player successfully' });
+    } catch (error) {
+      console.error('Error assigning planets to player:', error);
+      res.status(500).send({ error: 'Failed to assign planets to player' });
+    }
+  };
+
   // Register routes
   app.get('/api/health', healthCheck);
   app.get('/api/game-state', fetchGameState);
   app.post('/api/victory-points/update', updateVictoryPoints);
   app.post('/api/player/join', registerPlayer);
   app.get('/api/get-ip', getLocalIPs);
+  app.get('/api/planets', getPlanets);
+  app.post('/api/player/assign-planets', assignPlanetsToPlayer);
 };

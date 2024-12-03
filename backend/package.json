@@ -23,9 +23,10 @@
   },
   "devDependencies": {
     "@types/express": "^5.0.0",
-    "@types/knex": "^0.15.2",
+    "@types/knex": "^0.16.1",
     "@types/node": "^22.10.1",
-    "@types/socket.io": "^3.0.1",
+    "@types/socket.io": "^3.0.2",
     "@types/uuid": "^10.0.0"
-  }
+  },
+  "packageManager": "yarn@1.22.22+sha512.a6b2f7906b721bba3d67d4aff083df04dad64c399707841b7acf00f6b133b7ac24255f2652fa22ae3534329dc6180534e98d17432037ff6fd140556e2bb3137e"
 }

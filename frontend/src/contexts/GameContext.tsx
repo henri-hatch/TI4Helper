@@ -1,7 +1,7 @@
 // src/contexts/GameContext.tsx
 import React, { createContext, useState, useEffect, ReactNode } from 'react';
-import { GameState, PlayerJoinResponse, Player } from '../types';
-import { fetchGameState, joinGame } from '../services/api';
+import { GameState, Player, Planet, Objective, PlayerJoinResponse } from '../types';
+import { fetchGameState, joinGame, fetchPlanets, assignPlanetsToPlayer } from '../services/api';
 import socket from '../services/socket';
 import axios from 'axios';
 
@@ -19,10 +19,12 @@ const isLocalStorageAvailable = (() => {
 
 interface GameContextType {
   gameState: GameState | null;
-  setGameState: (state: GameState) => void;
+  setGameState: React.Dispatch<React.SetStateAction<GameState | null>>;
   playerId: string | null;
   playerName: string | null;
+  planets: Planet[];
   registerPlayer: (name: string) => Promise<void>;
+  updatePlayerPlanets: (planetIds: number[]) => Promise<void>;
 }
 
 export const GameContext = createContext<GameContextType>({
@@ -30,10 +32,12 @@ export const GameContext = createContext<GameContextType>({
   setGameState: () => {},
   playerId: null,
   playerName: null,
+  planets: [],
   registerPlayer: async () => {},
+  updatePlayerPlanets: async () => {},
 });
 
-export const GameProvider = ({ children }: { children: ReactNode }) => {
+export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [gameState, setGameState] = useState<GameState | null>(null);
   const [playerId, setPlayerId] = useState<string | null>(() => {
     if (isLocalStorageAvailable) {
@@ -47,6 +51,7 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
     }
     return null;
   });
+  const [planets, setPlanets] = useState<Planet[]>([]);
 
   useEffect(() => {
     // Fetch initial game state
@@ -60,7 +65,19 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
       }
     };
 
+    // Fetch planets
+    const fetchAllPlanets = async () => {
+      try {
+        const fetchedPlanets = await fetchPlanets();
+        setPlanets(fetchedPlanets);
+        console.log('Planets fetched:', fetchedPlanets);
+      } catch (error) {
+        console.error('Error fetching planets:', error);
+      }
+    };
+
     fetchData();
+    fetchAllPlanets();
 
     // Handle socket events
     const handleVictoryPointsUpdated = (updatedPoints: Record<string, number>) => {
@@ -126,7 +143,7 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
     };
   }, []);
 
-  const registerPlayer = async (name: string) => {
+  const registerPlayerHandler = async (name: string) => {
     const trimmedName = name.trim();
     if (!trimmedName) {
       console.error('Player name cannot be empty.');
@@ -161,9 +178,27 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
         } else {
           console.error('Player name exists but no player data returned.');
         }
+        // Handle other cases if necessary
       } else {
         console.error('Error registering player:', error);
       }
+    }
+  };
+
+  const updatePlayerPlanets = async (planetIds: number[]) => {
+    if (!playerId) {
+      console.error('No player ID available.');
+      return;
+    }
+    try {
+      console.log('Assigning Planets:', { playerId, planetIds }); // Debugging log
+      await assignPlanetsToPlayer(playerId, planetIds);
+      // Refetch game state after assignment
+      const updatedGameState = await fetchGameState();
+      setGameState(updatedGameState);
+      console.log('Updated game state after assigning planets:', updatedGameState);
+    } catch (error) {
+      console.error('Error assigning planets to player:', error);
     }
   };
 
@@ -174,7 +209,9 @@ export const GameProvider = ({ children }: { children: ReactNode }) => {
         setGameState,
         playerId,
         playerName,
-        registerPlayer,
+        planets,
+        registerPlayer: registerPlayerHandler,
+        updatePlayerPlanets,
       }}
     >
       {children}
