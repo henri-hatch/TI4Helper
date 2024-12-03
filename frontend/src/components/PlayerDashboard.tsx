@@ -217,10 +217,11 @@ const PlayerDashboard: React.FC = () => {
                     (e.target as HTMLImageElement).src = '/assets/default.png'; // Fallback image
                   }}
                 />
-                <CheckCircleIcon
+                {/* Remove the CheckCircleIcon below to hide the checkmark on the dashboard */}
+                {/* <CheckCircleIcon
                   color="primary"
                   sx={{ position: 'absolute', top: 0, right: 0 }}
-                />
+                /> */}
               </Box>
             ))}
           </Box>
