@@ -1,5 +1,5 @@
 // src/components/PlayerDashboard.tsx
-import React, { useContext, useState, useEffect } from 'react';
+import React, { useContext, useState, useEffect, MouseEvent, TouchEvent } from 'react';
 import { GameContext } from '../contexts/GameContext';
 import {
   AppBar,
@@ -27,8 +27,17 @@ const PlayerDashboard: React.FC = () => {
   const [isPlanetsDialogOpen, setIsPlanetsDialogOpen] = useState<boolean>(false);
   const [selectedPlanetIds, setSelectedPlanetIds] = useState<number[]>([]);
   const [dashboardPlanets, setDashboardPlanets] = useState<Planet[]>([]);
+  
+  // State for tapped planets
+  const [tappedPlanets, setTappedPlanets] = useState<number[]>([]);
+  
+  // State for context menu
+  const [contextMenu, setContextMenu] = useState<{
+    mouseX: number;
+    mouseY: number;
+    planetId: number | null;
+  } | null>(null);
 
-  // Fetch assigned planets from game state
   useEffect(() => {
     if (gameState && playerId) {
       const currentPlayer = gameState.players.find(p => p.playerId === playerId);
@@ -97,6 +106,63 @@ const PlayerDashboard: React.FC = () => {
     setIsPlanetsDialogOpen(false);
   };
 
+  // Handler for tapping a planet (left click/tap)
+  const handleTapPlanet = (planetId: number) => {
+    setTappedPlanets(prev => {
+      if (prev.includes(planetId)) {
+        return prev.filter(id => id !== planetId);
+      } else {
+        return [...prev, planetId];
+      }
+    });
+  };
+
+  // Handler for right-clicking a planet
+  const handleContextMenu = (event: MouseEvent, planetId: number) => {
+    event.preventDefault();
+    setContextMenu(
+      contextMenu === null
+        ? {
+            mouseX: event.clientX - 2,
+            mouseY: event.clientY - 4,
+            planetId: planetId,
+          }
+        : null,
+    );
+  };
+
+  const handleCloseContextMenu = () => {
+    setContextMenu(null);
+  };
+
+  // Handler for exploring a planet from context menu
+  const handleExplorePlanet = (planetId: number | null) => {
+    if (planetId !== null) {
+      console.log(`Explore planet with ID: ${planetId}`);
+      // Implement exploration logic here
+      // For example, draw an exploration card and apply effects
+    }
+    handleCloseContextMenu();
+  };
+
+  // Handle Long Press on Mobile
+  let touchTimeout: number; // Changed from NodeJS.Timeout to number
+
+  const handleTouchStart = (event: TouchEvent, planetId: number) => {
+    touchTimeout = window.setTimeout(() => {
+      const touch = event.touches[0];
+      setContextMenu({
+        mouseX: touch.clientX - 2,
+        mouseY: touch.clientY - 4,
+        planetId: planetId,
+      });
+    }, 500); // 500ms threshold for long press
+  };
+
+  const handleTouchEnd = () => {
+    clearTimeout(touchTimeout);
+  };
+
   return (
     <div>
       {/* Top Navigation Bar */}
@@ -156,7 +222,6 @@ const PlayerDashboard: React.FC = () => {
                     borderRadius: '8px',
                     padding: '10px',
                     width: '120px',
-                    textAlign: 'center',
                   }}
                 >
                   <img
@@ -207,26 +272,57 @@ const PlayerDashboard: React.FC = () => {
         ) : (
           <Box display="flex" flexWrap="wrap" gap={2}>
             {dashboardPlanets.map(planet => (
-              <Box key={planet.id} position="relative">
+              <Box
+                key={planet.id}
+                position="relative"
+                onClick={() => handleTapPlanet(planet.id)}
+                onContextMenu={(e) => handleContextMenu(e, planet.id)}
+                onTouchStart={(e) => handleTouchStart(e, planet.id)}
+                onTouchEnd={handleTouchEnd}
+                sx={{
+                  cursor: 'pointer',
+                  // Disable default touch callout on iOS
+                  WebkitTouchCallout: 'none',
+                  userSelect: 'none',
+                }}
+              >
                 <img
                   src={`/assets/${planet.name.toLowerCase()}.png`}
                   alt={planet.name}
                   width={100}
                   height={100}
+                  style={{
+                    filter: tappedPlanets.includes(planet.id) ? 'grayscale(100%)' : 'none',
+                    transition: 'filter 0.3s',
+                  }}
                   onError={(e) => {
                     (e.target as HTMLImageElement).src = '/assets/default.png'; // Fallback image
                   }}
+                  // Prevent right-click default menu on desktop
+                  onContextMenu={(e) => e.preventDefault()}
+                  draggable={false} // Prevent dragging image
                 />
-                {/* Remove the CheckCircleIcon below to hide the checkmark on the dashboard */}
-                {/* <CheckCircleIcon
-                  color="primary"
-                  sx={{ position: 'absolute', top: 0, right: 0 }}
-                /> */}
+                {/* Optional: Add planet name */}
+                <Typography variant="subtitle1" align="center">{planet.name}</Typography>
               </Box>
             ))}
           </Box>
         )}
       </div>
+
+      {/* Context Menu for Planets */}
+      <Menu
+        open={contextMenu !== null}
+        onClose={handleCloseContextMenu}
+        anchorReference="anchorPosition"
+        anchorPosition={
+          contextMenu !== null
+            ? { top: contextMenu.mouseY, left: contextMenu.mouseX }
+            : undefined
+        }
+      >
+        <MenuItem onClick={() => handleExplorePlanet(contextMenu?.planetId || null)}>Explore Planet</MenuItem>
+      </Menu>
     </div>
   );
 };
