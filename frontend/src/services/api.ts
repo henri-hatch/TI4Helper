@@ -1,6 +1,6 @@
 // src/services/api.ts
 import axios from 'axios';
-import { GameState, PlayerJoinResponse, Planet } from '../types';
+import { GameState, PlayerJoinResponse, Planet, ExplorationCard } from '../types';
 
 // Dynamically set the backend URL based on the current window location
 const BACKEND_PORT = '5000'; // Ensure this matches your backend's port
@@ -47,4 +47,42 @@ export const fetchPlanets = async (): Promise<Planet[]> => {
 export const assignPlanetsToPlayer = async (playerId: string, planetIds: number[]): Promise<void> => {
   console.log('Calling assignPlanetsToPlayer API with:', { playerId, planetIds }); // Debugging log
   await api.post('/player/assign-planets', { playerId, planetIds });
+};
+
+// API call to update planet tapped status
+export const updatePlanetTapped = async (playerId: string, planetId: number, tapped: boolean): Promise<void> => {
+  console.log('Updating planet tapped status:', { playerId, planetId, tapped });
+  await api.post('/player/update-tapped', { playerId, planetId, tapped });
+};
+
+// Fetch exploration cards
+export const fetchExplorationCards = async (): Promise<ExplorationCard[]> => {
+  const response = await api.get('/exploration-cards');
+  return response.data.cards;
+};
+
+// Explore a planet
+export const explorePlanet = async (playerId: string, planetId: number): Promise<ExplorationCard> => {
+  const response = await api.post('/explore-planet', { playerId, planetId });
+  return response.data.card;
+};
+
+// Fetch planet attachments
+export const fetchPlanetAttachments = async (planetId: number): Promise<ExplorationCard[]> => {
+  const response = await api.get(`/planet/${planetId}/attachments`);
+  return response.data.attachments;
+};
+
+// Fetch attach-type exploration cards
+export const fetchAttachTypeCards = async (): Promise<ExplorationCard[]> => {
+  const response = await api.get('/exploration-cards/attach');
+  return response.data.cards;
+};
+
+// Attach cards to a planet
+export const attachCardsToPlanet = async (
+  planetId: number,
+  cardIds: number[]
+): Promise<void> => {
+  await api.post('/planet/attachments', { planetId, cardIds });
 };

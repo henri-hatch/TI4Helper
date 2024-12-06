@@ -38,7 +38,8 @@ export const initializeDatabase = async () => {
       name TEXT UNIQUE NOT NULL,
       resources INTEGER NOT NULL,
       influence INTEGER NOT NULL,
-      legendaryAbility TEXT
+      legendaryAbility TEXT,
+      type TEXT NOT NULL CHECK (type IN ('hazardous', 'cultural', 'industrial'))
     );
 
     -- Player Planets Table
@@ -50,14 +51,50 @@ export const initializeDatabase = async () => {
       FOREIGN KEY (playerId) REFERENCES players(playerId),
       FOREIGN KEY (planetId) REFERENCES planets(id)
     );
+
+    CREATE TABLE IF NOT EXISTS exploration_cards (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT UNIQUE NOT NULL,
+      type TEXT NOT NULL CHECK (type IN ('hazardous', 'cultural', 'industrial', 'action', 'fragment')),
+      subtype TEXT,
+      image TEXT NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS exploration_deck (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      cardId INTEGER NOT NULL,
+      type TEXT NOT NULL,
+      FOREIGN KEY (cardId) REFERENCES exploration_cards(id)
+    );
+
+    CREATE TABLE IF NOT EXISTS player_exploration_cards (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      playerId TEXT NOT NULL,
+      cardId INTEGER NOT NULL,
+      FOREIGN KEY (playerId) REFERENCES players(playerId),
+      FOREIGN KEY (cardId) REFERENCES exploration_cards(id)
+    );
+
+    CREATE TABLE IF NOT EXISTS planet_attachments (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      planetId INTEGER NOT NULL,
+      cardId INTEGER NOT NULL,
+      FOREIGN KEY (planetId) REFERENCES planets(id),
+      FOREIGN KEY (cardId) REFERENCES exploration_cards(id),
+      UNIQUE (planetId, cardId) -- Add this line
+    );
   `);
 
   console.log('Database tables ensured.');
 
   // Initialize Planets
   await initializePlanets();
+
+  // Initialize Exploration Cards
+  await initializeExplorationCards();
 };
 
+// Update the planet insertion to include 'type'
 const initializePlanets = async () => {
   try {
     const planetsPath = path.join(__dirname, 'assets', 'planets.json');
@@ -68,11 +105,12 @@ const initializePlanets = async () => {
       const existing = await db.get(`SELECT id FROM planets WHERE name = ?`, planet.name);
       if (!existing) {
         await db.run(
-          `INSERT INTO planets (name, resources, influence, legendaryAbility) VALUES (?, ?, ?, ?)`,
+          `INSERT INTO planets (name, resources, influence, legendaryAbility, type) VALUES (?, ?, ?, ?, ?)`,
           planet.name,
           planet.resources,
           planet.influence,
-          planet.legendaryAbility
+          planet.legendaryAbility,
+          planet.type
         );
         console.log(`Inserted planet: ${planet.name}`);
       } else {
@@ -90,6 +128,54 @@ interface PlanetInput {
   resources: number;
   influence: number;
   legendaryAbility: string;
+  type: string;
+}
+
+const initializeExplorationCards = async () => {
+  try {
+    const db = getDatabase();
+    const cardsPath = path.join(__dirname, 'assets', 'exploration_cards.json');
+    const data = await fs.readFile(cardsPath, 'utf-8');
+    const cards: ExplorationCardInput[] = JSON.parse(data);
+
+    for (const card of cards) {
+      let cardId: number;
+      const existing = await db.get(`SELECT id FROM exploration_cards WHERE name = ?`, card.name);
+
+      if (!existing) {
+        const insertResult = await db.run(
+          `INSERT INTO exploration_cards (name, type, subtype, image) VALUES (?, ?, ?, ?)`,
+          card.name,
+          card.type,
+          card.subtype || null,
+          card.image
+        );
+        cardId = insertResult.lastID as number;
+        console.log(`Inserted exploration card: ${card.name}`);
+      } else {
+        cardId = existing.id; // Use the existing card's ID
+        console.log(`Exploration card already exists: ${card.name}`);
+      }
+
+      // Add card to the exploration deck
+      await db.run(
+        `INSERT INTO exploration_deck (cardId, type) VALUES (?, ?)`,
+        cardId,
+        card.type
+      );
+    }
+    console.log('Exploration cards initialized successfully.');
+  } catch (error) {
+    console.error('Error initializing exploration cards:', error);
+  }
+};
+
+// Define ExplorationCardInput interface
+interface ExplorationCardInput {
+  name: string;
+  type: string; // 'hazardous', 'cultural', 'industrial', 'action', 'fragment'
+  subtype?: string; // Optional additional categorization
+  image: string; // Relative path to image
 }
 
 export const getDatabase = (): Database<sqlite3.Database, sqlite3.Statement> => {

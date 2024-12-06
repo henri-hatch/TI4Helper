@@ -1,8 +1,23 @@
 [
     {
-        "name": "Earth",
+        "name": "Starpoint",
         "resources": 2,
         "influence": 3,
-        "legendaryAbility": ""
+        "legendaryAbility": "",
+        "type": "hazardous"
+    },
+    {
+        "name": "Vorhal",
+        "resources": 5,
+        "influence": 0,
+        "legendaryAbility": "",
+        "type": "cultural"
+    },
+    {
+        "name": "Wellon",
+        "resources": 1,
+        "influence": 4,
+        "legendaryAbility": "",
+        "type": "industrial"
     }
 ]

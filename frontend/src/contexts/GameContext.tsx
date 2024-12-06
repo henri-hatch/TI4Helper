@@ -1,7 +1,7 @@
 // src/contexts/GameContext.tsx
 import React, { createContext, useState, useEffect, ReactNode } from 'react';
-import { GameState, Player, Planet, Objective, PlayerJoinResponse } from '../types';
-import { fetchGameState, joinGame, fetchPlanets, assignPlanetsToPlayer } from '../services/api';
+import { GameState, Player, Planet, Objective, PlayerJoinResponse, PlayerPlanet, ExplorationCard } from '../types';
+import { fetchGameState as apiFetchGameState, joinGame, fetchPlanets, assignPlanetsToPlayer, updatePlanetTapped as apiUpdatePlanetTapped, explorePlanet, fetchPlanetAttachments } from '../services/api';
 import socket from '../services/socket';
 import axios from 'axios';
 
@@ -25,6 +25,9 @@ interface GameContextType {
   planets: Planet[];
   registerPlayer: (name: string) => Promise<void>;
   updatePlayerPlanets: (planetIds: number[]) => Promise<void>;
+  handleUpdatePlanetTapped: (planetId: number, tapped: boolean) => Promise<void>; // New function
+  explorePlanet: (planetId: number) => Promise<void>;
+  getPlanetAttachments: (planetId: number) => Promise<ExplorationCard[]>;
 }
 
 export const GameContext = createContext<GameContextType>({
@@ -35,6 +38,9 @@ export const GameContext = createContext<GameContextType>({
   planets: [],
   registerPlayer: async () => {},
   updatePlayerPlanets: async () => {},
+  handleUpdatePlanetTapped: async () => {},
+  explorePlanet: async () => {},
+  getPlanetAttachments: async () => [],
 });
 
 export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
@@ -57,7 +63,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     // Fetch initial game state
     const fetchData = async () => {
       try {
-        const data = await fetchGameState();
+        const data = await apiFetchGameState();
         setGameState(data);
         console.log('Initial game state fetched:', data);
       } catch (error) {
@@ -106,81 +112,49 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       });
     };
 
-    const handlePlayerJoined = (newPlayer: Player) => {
-      console.log('Received player-joined event:', newPlayer);
-      setGameState((prevState) => {
-        if (prevState) {
-          // Check if player already exists to prevent duplicates
-          const playerExists = prevState.players.some(p => p.playerId === newPlayer.playerId);
-          if (playerExists) return prevState;
-
-          // Add the new player to the players array
-          const updatedPlayers = [...prevState.players, newPlayer];
-
-          // Update victoryPoints mapping
-          const updatedVictoryPoints = { ...prevState.victoryPoints, [newPlayer.playerId]: newPlayer.victoryPoints };
-
-          const updatedGameState: GameState = {
-            ...prevState,
-            players: updatedPlayers,
-            victoryPoints: updatedVictoryPoints,
-          };
-
-          console.log('Updated GameState with new player:', updatedGameState);
-          return updatedGameState;
-        }
-        return prevState;
-      });
-    };
-
     socket.on('victory-points-updated', handleVictoryPointsUpdated);
-    socket.on('player-joined', handlePlayerJoined); // Listen for new player joins
 
-    // Clean up the socket listeners on unmount
+    // Cleanup on unmount
     return () => {
       socket.off('victory-points-updated', handleVictoryPointsUpdated);
-      socket.off('player-joined', handlePlayerJoined);
     };
   }, []);
 
   const registerPlayerHandler = async (name: string) => {
-    const trimmedName = name.trim();
-    if (!trimmedName) {
-      console.error('Player name cannot be empty.');
-      return;
-    }
     try {
-      const data: PlayerJoinResponse = await joinGame(trimmedName);
-      console.log('Register player response:', data);
-      setPlayerId(data.playerId);
-      setPlayerName(data.name);
+      const response = await joinGame(name);
+      setPlayerId(response.playerId);
+      setPlayerName(response.name);
 
       if (isLocalStorageAvailable) {
-        try {
-          localStorage.setItem('playerId', data.playerId);
-          localStorage.setItem('playerName', data.name);
-        } catch (e) {
-          console.error('Error setting localStorage:', e);
-        }
+        localStorage.setItem('playerId', response.playerId);
+        localStorage.setItem('playerName', response.name);
       }
-    } catch (error: any) {
-      if (axios.isAxiosError(error) && error.response?.status === 409) {
-        console.log('Player name already exists. Using existing player data.');
-        const existingPlayer = error.response.data.player as PlayerJoinResponse;
-        if (existingPlayer) {
-          setPlayerId(existingPlayer.playerId);
-          setPlayerName(existingPlayer.name);
 
-          if (isLocalStorageAvailable) {
-            localStorage.setItem('playerId', existingPlayer.playerId);
-            localStorage.setItem('playerName', existingPlayer.name);
+      // Optionally, fetch the updated game state
+      const updatedGameState = await apiFetchGameState();
+      setGameState(updatedGameState);
+    } catch (error: any) {
+      if (axios.isAxiosError(error)) {
+        if (error.response?.status === 409) {
+          console.log('Player name already exists. Using existing player data.');
+          const existingPlayer = error.response.data.player as PlayerJoinResponse;
+          if (existingPlayer) {
+            setPlayerId(existingPlayer.playerId);
+            setPlayerName(existingPlayer.name);
+
+            if (isLocalStorageAvailable) {
+              localStorage.setItem('playerId', existingPlayer.playerId);
+              localStorage.setItem('playerName', existingPlayer.name);
+            }
+          } else {
+            console.error('Player name exists but no player data returned.');
           }
         } else {
-          console.error('Player name exists but no player data returned.');
+          console.error('Error registering player:', error);
         }
-        // Handle other cases if necessary
       } else {
-        console.error('Error registering player:', error);
+        console.error('Unexpected error:', error);
       }
     }
   };
@@ -194,11 +168,53 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       console.log('Assigning Planets:', { playerId, planetIds }); // Debugging log
       await assignPlanetsToPlayer(playerId, planetIds);
       // Refetch game state after assignment
-      const updatedGameState = await fetchGameState();
+      const updatedGameState = await apiFetchGameState();
       setGameState(updatedGameState);
       console.log('Updated game state after assigning planets:', updatedGameState);
     } catch (error) {
       console.error('Error assigning planets to player:', error);
+    }
+  };
+
+  // New function to handle planet tapped status updates
+  const handleUpdatePlanetTapped = async (planetId: number, tapped: boolean) => {
+    if (!playerId) {
+      console.error('No player ID available.');
+      return;
+    }
+    try {
+      console.log('Updating planet tapped status:', { playerId, planetId, tapped });
+      await apiUpdatePlanetTapped(playerId, planetId, tapped);
+      // Refetch game state after updating planet
+      const updatedGameState = await apiFetchGameState();
+      setGameState(updatedGameState);
+      console.log('Updated game state after tapping planet:', updatedGameState);
+    } catch (error) {
+      console.error('Error updating planet tapped status:', error);
+    }
+  };
+
+  const explorePlanetHandler = async (planetId: number) => {
+    if (!playerId) {
+      console.error('No player ID available.');
+      return;
+    }
+    try {
+      const card = await explorePlanet(playerId, planetId);
+      console.log('Exploration result:', card);
+      // Update game state or show a modal with the card details
+    } catch (error) {
+      console.error('Error exploring planet:', error);
+    }
+  };
+
+  const getPlanetAttachments = async (planetId: number): Promise<ExplorationCard[]> => {
+    try {
+      const attachments = await fetchPlanetAttachments(planetId);
+      return attachments;
+    } catch (error) {
+      console.error('Error fetching planet attachments:', error);
+      return [];
     }
   };
 
@@ -212,6 +228,9 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         planets,
         registerPlayer: registerPlayerHandler,
         updatePlayerPlanets,
+        handleUpdatePlanetTapped,
+        explorePlanet: explorePlanetHandler,
+        getPlanetAttachments,
       }}
     >
       {children}

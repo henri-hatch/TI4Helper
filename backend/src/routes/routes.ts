@@ -14,6 +14,15 @@ interface Planet {
   legendaryAbility: string;
 }
 
+// Add new interfaces
+interface ExplorationCard {
+  id: number;
+  name: string;
+  type: string;
+  subtype?: string;
+  image: string;
+}
+
 export const setupRoutes = (app: Application) => {
   // Health check route
   const healthCheck: RequestHandler = (req, res) => {
@@ -25,14 +34,13 @@ export const setupRoutes = (app: Application) => {
     try {
       const db = getDatabase();
 
-      // Fetch players with their assigned planets
+      // Fetch players with their assigned planets and tapped status
       const playersData = await db.all(`
-        SELECT p.*, pp.planetId
+        SELECT p.*, pp.planetId, pp.tapped
         FROM players p
         LEFT JOIN player_planets pp ON p.playerId = pp.playerId
       `);
 
-      // Map players to include an array of planetIds
       const playersMap: Record<string, any> = {};
 
       playersData.forEach((p) => {
@@ -44,17 +52,35 @@ export const setupRoutes = (app: Application) => {
             resources: p.resources,
             influence: p.influence,
             commodities: p.commodities,
-            tradeGoods: p.trade_goods, // Note the mapping from snake_case to camelCase
+            tradeGoods: p.trade_goods, // Mapping from snake_case to camelCase
             victoryPoints: p.victoryPoints,
-            planets: [],
+            planets: [], // This will hold planet details including 'tapped'
           };
         }
         if (p.planetId) {
-          playersMap[p.playerId].planets.push(p.planetId);
+          playersMap[p.playerId].planets.push({
+            id: p.planetId,
+            tapped: p.tapped === 1, // SQLite stores BOOLEAN as integers
+            attachments: [], // Initialize attachments array
+          });
         }
       });
 
       const players = Object.values(playersMap);
+
+      // Fetch attachments for each planet
+      for (const player of players) {
+        for (const planet of player.planets) {
+          const attachments = await db.all(
+            `SELECT ec.*
+             FROM planet_attachments pa
+             JOIN exploration_cards ec ON pa.cardId = ec.id
+             WHERE pa.planetId = ?`,
+            planet.id
+          );
+          planet.attachments = attachments;
+        }
+      }
 
       // Fetch objectives
       const objectives = await db.all(`SELECT * FROM objectives`);
@@ -113,6 +139,39 @@ export const setupRoutes = (app: Application) => {
     } catch (error) {
       console.error('Error updating victory points:', error);
       res.status(500).send({ error: 'Failed to update victory points' });
+    }
+  };
+
+  // Update Planet Tapped Status
+  const updatePlanetTapped: RequestHandler = async (req, res) => {
+    const { playerId, planetId, tapped } = req.body as { playerId: string; planetId: number; tapped: boolean };
+
+    // Validate input
+    if (typeof playerId !== 'string' || typeof planetId !== 'number' || typeof tapped !== 'boolean') {
+      res.status(400).send({ error: 'Invalid input data' });
+      return;
+    }
+
+    try {
+      const db = getDatabase();
+
+      // Update the tapped status
+      const result = await db.run(
+        `UPDATE player_planets SET tapped = ? WHERE playerId = ? AND planetId = ?`,
+        tapped,
+        playerId,
+        planetId
+      );
+
+      if (result.changes === 0) {
+        res.status(404).send({ error: 'Planet assignment not found' });
+        return;
+      }
+
+      res.status(200).send({ message: 'Planet tapped status updated successfully' });
+    } catch (error) {
+      console.error('Error updating planet tapped status:', error);
+      res.status(500).send({ error: 'Failed to update planet tapped status' });
     }
   };
 
@@ -243,6 +302,143 @@ export const setupRoutes = (app: Application) => {
     }
   };
 
+  // Get Exploration Cards
+  const getExplorationCards: RequestHandler = async (req, res) => {
+    try {
+      const db = getDatabase();
+      const cards = await db.all(`SELECT * FROM exploration_cards`);
+      res.status(200).json({ cards });
+    } catch (error) {
+      console.error('Error fetching exploration cards:', error);
+      res.status(500).json({ error: 'Failed to fetch exploration cards' });
+    }
+  };
+
+  // Explore a Planet
+  const explorePlanet: RequestHandler = async (req, res) => {
+    const { playerId, planetId } = req.body as { playerId: string; planetId: number };
+
+    if (typeof playerId !== 'string' || typeof planetId !== 'number') {
+      res.status(400).send({ error: 'Invalid input data' });
+      return;
+    }
+
+    try {
+      const db = getDatabase();
+
+      // Get planet type
+      const planet = await db.get(`SELECT * FROM planets WHERE id = ?`, planetId);
+      if (!planet) {
+        res.status(404).send({ error: 'Planet not found' });
+        return;
+      }
+
+      // Draw a random card from the corresponding deck
+      const card = await db.get(
+        `SELECT ec.*
+         FROM exploration_deck ed
+         JOIN exploration_cards ec ON ed.cardId = ec.id
+         WHERE ed.type = ?
+         ORDER BY RANDOM()
+         LIMIT 1`,
+        planet.type
+      );
+
+      if (!card) {
+        res.status(404).send({ error: 'No cards left in the deck' });
+        return;
+      }
+
+      // Remove the card from the deck
+      await db.run(`DELETE FROM exploration_deck WHERE cardId = ?`, card.id);
+
+      if (card.subtype === 'attach') {
+        // Attach the card to the planet
+        await db.run(
+          `INSERT INTO planet_attachments (planetId, cardId) VALUES (?, ?)`,
+          planetId,
+          card.id
+        );
+      } else {
+        // Add the card to the player's exploration cards (e.g., actions, fragments)
+        await db.run(
+          `INSERT INTO player_exploration_cards (playerId, cardId) VALUES (?, ?)`,
+          playerId,
+          card.id
+        );
+      }
+
+      res.status(200).json({ card });
+    } catch (error) {
+      console.error('Error exploring planet:', error);
+      res.status(500).send({ error: 'Failed to explore planet' });
+    }
+  };
+
+  // Get Planet Attachments
+  const getPlanetAttachments: RequestHandler = async (req, res) => {
+    const { planetId } = req.params;
+
+    try {
+      const db = getDatabase();
+      const attachments = await db.all(
+        `SELECT ec.*
+         FROM planet_attachments pa
+         JOIN exploration_cards ec ON pa.cardId = ec.id
+         WHERE pa.planetId = ?`,
+        planetId
+      );
+      res.status(200).json({ attachments });
+    } catch (error) {
+      console.error('Error fetching planet attachments:', error);
+      res.status(500).send({ error: 'Failed to fetch planet attachments' });
+    }
+  };
+
+  // Get Attach-Type Exploration Cards
+  const getAttachTypeExplorationCards: RequestHandler = async (req, res) => {
+    try {
+      const db = getDatabase();
+      const cards = await db.all(
+        `SELECT * FROM exploration_cards WHERE subtype = 'attach'`
+      );
+      res.status(200).json({ cards });
+    } catch (error) {
+      console.error('Error fetching attach-type exploration cards:', error);
+      res.status(500).json({ error: 'Failed to fetch attach-type exploration cards' });
+    }
+  };
+
+  // Attach Cards to a Planet
+  const attachCardsToPlanet: RequestHandler = async (req, res) => {
+    const { planetId, cardIds } = req.body as { planetId: number; cardIds: number[] };
+
+    if (typeof planetId !== 'number' || !Array.isArray(cardIds)) {
+      res.status(400).send({ error: 'Invalid input data' });
+      return;
+    }
+
+    try {
+      const db = getDatabase();
+
+      // Insert attachments with uniqueness enforced
+      const insertPromises = cardIds.map((cardId) => {
+        return db.run(
+          `INSERT OR IGNORE INTO planet_attachments (planetId, cardId) VALUES (?, ?)`,
+          planetId,
+          cardId
+        );
+      });
+
+      await Promise.all(insertPromises);
+
+      res.status(200).json({ message: 'Attachments added successfully' });
+    } catch (error) {
+      console.error('Error attaching cards to planet:', error);
+      res.status(500).send({ error: 'Failed to attach cards to planet' });
+    }
+  };
+
   // Register routes
   app.get('/api/health', healthCheck);
   app.get('/api/game-state', fetchGameState);
@@ -251,4 +447,10 @@ export const setupRoutes = (app: Application) => {
   app.get('/api/get-ip', getLocalIPs);
   app.get('/api/planets', getPlanets);
   app.post('/api/player/assign-planets', assignPlanetsToPlayer);
+  app.post('/api/player/update-tapped', updatePlanetTapped);
+  app.get('/api/exploration-cards', getExplorationCards);
+  app.post('/api/explore-planet', explorePlanet);
+  app.get('/api/planet/:planetId/attachments', getPlanetAttachments);
+  app.get('/api/exploration-cards/attach', getAttachTypeExplorationCards);
+  app.post('/api/planet/attachments', attachCardsToPlanet);
 };

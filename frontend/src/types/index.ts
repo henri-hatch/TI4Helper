@@ -9,17 +9,31 @@ export interface Player {
   influence: number;
   commodities: number;
   tradeGoods: number;
-  planets: number[]; // Array of planet IDs
+  planets: PlayerPlanet[]; // Updated to include 'tapped' status
   victoryPoints: number;
 }
 
-// Represents a planet owned by a player
+// Represents a planet owned by a player with tapped status
+export interface PlayerPlanet {
+  id: number;
+  tapped: boolean;
+  attachments?: ExplorationCard[]; // Optional property
+}
+
+// Represents a planet in general
 export interface Planet {
   id: number;
   name: string;
   resources: number;
   influence: number;
   legendaryAbility: string;
+  type: 'hazardous' | 'cultural' | 'industrial'; // Added type
+}
+
+// Represents a planet with tapped status for the dashboard
+export interface DashboardPlanet extends Planet {
+  tapped: boolean;
+  attachments?: ExplorationCard[]; // Optional property
 }
 
 // Represents a public or secret objective
@@ -42,4 +56,13 @@ export interface GameState {
 export interface PlayerJoinResponse {
   playerId: string;
   name: string;
+}
+
+// Represents an exploration card
+export interface ExplorationCard {
+  id: number;
+  name: string;
+  type: string;
+  subtype?: string;
+  image: string;
 }

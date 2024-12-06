@@ -1,0 +1,20 @@
+[
+  {
+    "name": "Dyson Sphere",
+    "type": "cultural",
+    "subtype": "attach",
+    "image": "exploration_cards/dyson_sphere.jpg"
+  },
+  {
+    "name": "Lazax Survivors",
+    "type": "hazardous",
+    "subtype": "attach",
+    "image": "exploration_cards/lazax_survivors.jpg"
+  },
+  {
+    "name": "Propulsion Research Facility",
+    "type": "industrial",
+    "subtype": "attach",
+    "image": "exploration_cards/propulsion_research_facility.jpg"
+  }
+]
