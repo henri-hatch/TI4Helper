@@ -1,6 +1,6 @@
 // frontend/src/components/Planets.tsx
 
-import React, { useContext, useState, useEffect, MouseEvent, TouchEvent, Dispatch, SetStateAction } from 'react';
+import React, { useContext, useState, useEffect, MouseEvent, TouchEvent } from 'react';
 import { GameContext } from '../contexts/GameContext';
 import {
   Box,
@@ -10,17 +10,24 @@ import {
   DialogContent,
   DialogActions,
   Button,
-  Checkbox,
+  IconButton,
   CircularProgress,
   TextField,
   Menu,
   MenuItem,
-  IconButton,
+  Checkbox,
 } from '@mui/material';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import MoreVertIcon from '@mui/icons-material/MoreVert';
-import { Planet, DashboardPlanet, ExplorationCard } from '../types';
-import { fetchGameState as apiFetchGameState, attachCardsToPlanet, fetchAttachTypeCards, explorePlanet } from '../services/api';
+import { DashboardPlanet, ExplorationCard } from '../types';
+import { 
+  fetchGameState as apiFetchGameState, 
+  attachCardsToPlanet, 
+  detachCardsFromPlanet, 
+  fetchAttachTypeCards, 
+  deletePlanet as apiDeletePlanet,
+  explorePlanet,
+} from '../services/api';
 
 const PlanetsTab: React.FC = () => {
   const {
@@ -31,8 +38,10 @@ const PlanetsTab: React.FC = () => {
     getPlanetAttachments,
     updatePlayerPlanets,
     handleUpdatePlanetTapped,
+    // ... any other context methods
   } = useContext(GameContext);
 
+  // Existing state variables
   const [selectedPlanetIds, setSelectedPlanetIds] = useState<number[]>([]);
   const [contextMenu, setContextMenu] = useState<{
     mouseX: number;
@@ -42,12 +51,16 @@ const PlanetsTab: React.FC = () => {
   
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [isPlanetsDialogOpen, setIsPlanetsDialogOpen] = useState<boolean>(false);
-  const [attachmentModalOpen, setAttachmentModalOpen] = useState<boolean>(false);
   const [attachments, setAttachments] = useState<ExplorationCard[]>([]);
   const [selectedPlanetId, setSelectedPlanetId] = useState<number | null>(null);
-  const [modifyAttachmentsModalOpen, setModifyAttachmentsModalOpen] = useState<boolean>(false);
+  
+  // New state variables for Add and Remove Attachments
+  const [addAttachmentsModalOpen, setAddAttachmentsModalOpen] = useState<boolean>(false);
+  const [removeAttachmentsModalOpen, setRemoveAttachmentsModalOpen] = useState<boolean>(false);
+  
   const [availableAttachments, setAvailableAttachments] = useState<ExplorationCard[]>([]);
   const [selectedAttachmentIds, setSelectedAttachmentIds] = useState<number[]>([]);
+  const [attachmentsToRemove, setAttachmentsToRemove] = useState<number[]>([]);
 
   useEffect(() => {
     if (gameState && playerId) {
@@ -63,104 +76,6 @@ const PlanetsTab: React.FC = () => {
       window.removeEventListener('openSelectPlanetsDialog', openDialog);
     };
   }, [gameState, playerId]);
-
-  const togglePlanetSelection = (planetId: number) => {
-    setSelectedPlanetIds(prev => {
-      if (prev.includes(planetId)) {
-        return prev.filter(id => id !== planetId);
-      } else {
-        return [...prev, planetId];
-      }
-    });
-  };
-
-  const handleConfirmPlanets = async () => {
-    await updatePlayerPlanets(selectedPlanetIds);
-    setIsPlanetsDialogOpen(false);
-  };
-
-  const handleTapPlanet = async (planetId: number) => {
-    const currentPlayer = gameState?.players.find(p => p.playerId === playerId);
-    const planet = currentPlayer?.planets.find(pp => pp.id === planetId);
-    if (!planet) return;
-
-    const newTappedStatus = !planet.tapped;
-
-    // Optimistically update UI by calling the context function
-    await handleUpdatePlanetTapped(planetId, newTappedStatus);
-  };
-
-  const handleExplorePlanet = async (planetId: number | null) => {
-    if (planetId !== null && playerId) { // Ensure playerId is available
-      await explorePlanet(playerId, planetId); // Pass both arguments
-      // Refresh game state or specific planet data if needed
-      const updatedGameState = await apiFetchGameState();
-      setGameState(updatedGameState);
-    }
-    handleCloseContextMenu();
-  };
-
-  const handleModifyAttachments = async (planetId: number | null) => {
-    if (planetId !== null) {
-      setSelectedPlanetId(planetId);
-      // Fetch all attach-type cards without filtering out attached ones
-      const attachCards = await fetchAttachTypeCards();
-
-      setAvailableAttachments(attachCards);
-      setModifyAttachmentsModalOpen(true);
-    }
-    handleCloseContextMenu();
-  };
-
-  const handleShowAttachments = async (planetId: number) => {
-    const attachments = await getPlanetAttachments(planetId);
-    setAttachments(attachments);
-    setSelectedPlanetId(planetId);
-    setAttachmentModalOpen(true);
-  };
-
-  const toggleAttachmentSelection = (cardId: number) => {
-    setSelectedAttachmentIds((prev) => {
-      if (prev.includes(cardId)) {
-        return prev.filter((id) => id !== cardId);
-      } else {
-        return [...prev, cardId];
-      }
-    });
-  };
-
-  const handleConfirmAttachments = async () => {
-    if (selectedPlanetId !== null) {
-      // Fetch current attachments to determine additions and removals
-      const currentAttachments = gameState?.players
-        .find(p => p.playerId === playerId)
-        ?.planets.find(pp => pp.id === selectedPlanetId)?.attachments || [];
-
-      const currentAttachmentIds = currentAttachments.map(att => att.id);
-
-      // Determine which attachments to add
-      const attachmentsToAdd = selectedAttachmentIds.filter(id => !currentAttachmentIds.includes(id));
-
-      // Determine which attachments to remove
-      const attachmentsToRemove = currentAttachmentIds.filter(id => !selectedAttachmentIds.includes(id));
-
-      // Attach new cards
-      if (attachmentsToAdd.length > 0) {
-        await attachCardsToPlanet(selectedPlanetId, attachmentsToAdd);
-      }
-
-      // Optionally, implement a detachCardsFromPlanet API call if you want to remove attachments
-      // if (attachmentsToRemove.length > 0) {
-      //   await detachCardsFromPlanet(selectedPlanetId, attachmentsToRemove);
-      // }
-
-      // Refresh game state to reflect changes
-      const updatedGameState = await apiFetchGameState();
-      setGameState(updatedGameState);
-
-      setModifyAttachmentsModalOpen(false);
-    }
-  };
 
   // Handle Context Menu
   const handleContextMenu = (event: MouseEvent, planetId: number) => {
@@ -185,14 +100,132 @@ const PlanetsTab: React.FC = () => {
     event.preventDefault();
     const touch = event.touches[0];
     setContextMenu({
-      mouseX: touch.clientX,
-      mouseY: touch.clientY,
+      mouseX: touch.clientX - 2,
+      mouseY: touch.clientY - 4,
       planetId,
     });
   };
 
   const handleTouchEnd = () => {
     handleCloseContextMenu();
+  };
+
+  // Toggle Planet Selection
+  const togglePlanetSelection = (planetId: number) => {
+    setSelectedPlanetIds(prev => {
+      if (prev.includes(planetId)) {
+        return prev.filter(id => id !== planetId);
+      } else {
+        return [...prev, planetId];
+      }
+    });
+  };
+
+  // Handle Confirm Planets
+  const handleConfirmPlanets = async () => {
+    await updatePlayerPlanets(selectedPlanetIds);
+    setIsPlanetsDialogOpen(false);
+  };
+
+  // Handle Tap Planet
+  const handleTapPlanet = async (planetId: number) => {
+    const currentPlayer = gameState?.players.find(p => p.playerId === playerId);
+    const planet = currentPlayer?.planets.find(pp => pp.id === planetId);
+    if (!planet) return;
+
+    const newTappedStatus = !planet.tapped;
+
+    await handleUpdatePlanetTapped(planetId, newTappedStatus);
+  };
+
+  // Handle Explore Planet
+  const handleExplorePlanet = async (planetId: number) => {
+    if (planetId !== null && playerId) { // Ensure planetId and playerId are valid
+      await explorePlanet(playerId, planetId); // Pass both arguments
+      // Refresh game state or specific planet data if needed
+      const updatedGameState = await apiFetchGameState();
+      setGameState(updatedGameState);
+    }
+    handleCloseContextMenu();
+  };
+
+  // Handle Add Attachments
+  const handleAddAttachments = async (planetId: number) => {
+    if (planetId !== null) {
+      setSelectedPlanetId(planetId);
+      // Fetch all attach-type cards without filtering out attached ones
+      const attachCards = await fetchAttachTypeCards();
+      setAvailableAttachments(attachCards);
+      setAddAttachmentsModalOpen(true);
+      setSelectedAttachmentIds([]); // Reset selection
+    }
+    handleCloseContextMenu();
+  };
+
+  // Handle Remove Attachments
+  const handleRemoveAttachments = async (planetId: number) => {
+    if (planetId !== null) {
+      setSelectedPlanetId(planetId);
+      // Fetch current attachments
+      const currentAttachments = await getPlanetAttachments(planetId);
+      setAttachments(currentAttachments);
+      setRemoveAttachmentsModalOpen(true);
+      setAttachmentsToRemove([]); // Reset selection
+    }
+    handleCloseContextMenu();
+  };
+
+  // Toggle Attachment Selection for Adding
+  const toggleAttachmentSelection = (cardId: number) => {
+    setSelectedAttachmentIds((prev) => {
+      if (prev.includes(cardId)) {
+        return prev.filter((id) => id !== cardId);
+      } else {
+        return [...prev, cardId];
+      }
+    });
+  };
+
+  // Toggle Attachment Selection for Removing
+  const toggleAttachmentToRemove = (cardId: number) => {
+    setAttachmentsToRemove((prev) => {
+      if (prev.includes(cardId)) {
+        return prev.filter((id) => id !== cardId);
+      } else {
+        return [...prev, cardId];
+      }
+    });
+  };
+
+  // Handle Confirm Add Attachments
+  const handleConfirmAddAttachments = async () => {
+    if (selectedPlanetId !== null) {
+      // Attach new cards
+      if (selectedAttachmentIds.length > 0) {
+        await attachCardsToPlanet(selectedPlanetId, selectedAttachmentIds);
+      }
+
+      // Refresh game state to reflect changes
+      const updatedGameState = await apiFetchGameState();
+      setGameState(updatedGameState);
+
+      setAddAttachmentsModalOpen(false);
+      setSelectedAttachmentIds([]); // Reset selection
+    }
+  };
+
+  // Handle Confirm Remove Attachments
+  const handleConfirmRemoveAttachments = async () => {
+    if (selectedPlanetId !== null && attachmentsToRemove.length > 0) {
+      await detachCardsFromPlanet(selectedPlanetId, attachmentsToRemove);
+
+      // Refresh game state to reflect changes
+      const updatedGameState = await apiFetchGameState();
+      setGameState(updatedGameState);
+
+      setRemoveAttachmentsModalOpen(false);
+      setAttachmentsToRemove([]); // Reset selection
+    }
   };
 
   // Filtered planets based on search query
@@ -294,34 +327,6 @@ const PlanetsTab: React.FC = () => {
         </DialogActions>
       </Dialog>
 
-      {/* Attachments Modal */}
-      <Dialog
-        open={attachmentModalOpen}
-        onClose={() => setAttachmentModalOpen(false)}
-        maxWidth="sm"
-        fullWidth
-      >
-        <DialogTitle>Attachments</DialogTitle>
-        <DialogContent>
-          {attachments.map((attachment) => (
-            <Box key={attachment.id} mb={2}>
-              <img
-                src={`/assets/${attachment.image}`}
-                alt={attachment.name}
-                width="100%"
-                style={{ maxWidth: 300, height: 'auto' }}
-                onError={(e) => {
-                  (e.target as HTMLImageElement).src = '/assets/default.jpg';
-                }}
-              />
-            </Box>
-          ))}
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setAttachmentModalOpen(false)}>Close</Button>
-        </DialogActions>
-      </Dialog>
-
       {/* Context Menu for Planets */}
       <Menu
         open={contextMenu !== null}
@@ -333,22 +338,43 @@ const PlanetsTab: React.FC = () => {
             : undefined
         }
       >
-        <MenuItem onClick={() => handleExplorePlanet(contextMenu?.planetId || null)}>
+        <MenuItem
+          onClick={() => {
+            if (contextMenu && typeof contextMenu.planetId === 'number') {
+              handleExplorePlanet(contextMenu.planetId);
+            }
+          }}
+        >
           Explore Planet
         </MenuItem>
-        <MenuItem onClick={() => handleModifyAttachments(contextMenu?.planetId || null)}>
-          Modify Attachments
+        <MenuItem
+          onClick={() => {
+            if (contextMenu && typeof contextMenu.planetId === 'number') {
+              handleAddAttachments(contextMenu.planetId);
+            }
+          }}
+        >
+          Add Attachments
+        </MenuItem>
+        <MenuItem
+          onClick={() => {
+            if (contextMenu && typeof contextMenu.planetId === 'number') {
+              handleRemoveAttachments(contextMenu.planetId);
+            }
+          }}
+        >
+          Remove Attachments
         </MenuItem>
       </Menu>
 
-      {/* Modify Attachments Modal */}
+      {/* Add Attachments Modal */}
       <Dialog
-        open={modifyAttachmentsModalOpen}
-        onClose={() => setModifyAttachmentsModalOpen(false)}
+        open={addAttachmentsModalOpen}
+        onClose={() => setAddAttachmentsModalOpen(false)}
         maxWidth="sm"
         fullWidth
       >
-        <DialogTitle>Select Attachments</DialogTitle>
+        <DialogTitle>Add Attachments</DialogTitle>
         <DialogContent>
           <Box display="flex" flexWrap="wrap" gap={2}>
             {availableAttachments.map((card) => (
@@ -383,8 +409,70 @@ const PlanetsTab: React.FC = () => {
           </Box>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setModifyAttachmentsModalOpen(false)}>Cancel</Button>
-          <Button variant="contained" onClick={handleConfirmAttachments} disabled={selectedAttachmentIds.length === 0}>
+          <Button onClick={() => setAddAttachmentsModalOpen(false)}>Cancel</Button>
+          <Button
+            variant="contained"
+            onClick={handleConfirmAddAttachments}
+            disabled={selectedAttachmentIds.length === 0}
+          >
+            Confirm
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Remove Attachments Modal */}
+      <Dialog
+        open={removeAttachmentsModalOpen}
+        onClose={() => setRemoveAttachmentsModalOpen(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>Remove Attachments</DialogTitle>
+        <DialogContent>
+          {attachments.length === 0 ? (
+            <Typography>No attachments to remove.</Typography>
+          ) : (
+            <Box display="flex" flexWrap="wrap" gap={2}>
+              {attachments.map((card) => (
+                <Box
+                  key={card.id}
+                  display="flex"
+                  flexDirection="column"
+                  alignItems="center"
+                  onClick={() => toggleAttachmentToRemove(card.id)}
+                  sx={{
+                    cursor: 'pointer',
+                    border: attachmentsToRemove.includes(card.id) ? '2px solid #d32f2f' : '2px solid transparent',
+                    borderRadius: '8px',
+                    padding: '10px',
+                    width: '100px',
+                    opacity: attachmentsToRemove.includes(card.id) ? 0.6 : 1,
+                  }}
+                >
+                  <img
+                    src={`/assets/${card.image}`}
+                    alt={card.name}
+                    width={80}
+                    height={120}
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).src = '/assets/default.jpg';
+                    }}
+                  />
+                  {/* Optionally, display the card name or other details */}
+                  {/* <Typography variant="body2">{card.name}</Typography> */}
+                </Box>
+              ))}
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setRemoveAttachmentsModalOpen(false)}>Cancel</Button>
+          <Button
+            variant="contained"
+            color="error"
+            onClick={handleConfirmRemoveAttachments}
+            disabled={attachmentsToRemove.length === 0}
+          >
             Confirm
           </Button>
         </DialogActions>
@@ -412,17 +500,17 @@ const PlanetsTab: React.FC = () => {
                   WebkitTouchCallout: 'none',
                   userSelect: 'none',
                   opacity: planet.tapped ? 0.6 : 1,
-                  width: '100px', // Consistent width
-                  height: '150px', // Fixed height
+                  width: '100px',
+                  height: '150px',
                 }}
               >
-                {/* Triple Dot Menu */}
+                {/* Triple Dot Menu - Removed handleShowAttachments */}
                 {planet.attachments && planet.attachments.length > 0 && (
                   <IconButton
                     size="small"
                     onClick={(e) => {
                       e.stopPropagation();
-                      handleShowAttachments(planet.id);
+                      // handleShowAttachments(planet.id); // Removed
                     }}
                     sx={{
                       position: 'absolute',
@@ -440,7 +528,7 @@ const PlanetsTab: React.FC = () => {
                   src={`/assets/planet_cards/${planet.name.toLowerCase()}.face.jpg`}
                   alt={planet.name}
                   width={100}
-                  height={150} // Adjust height to maintain aspect ratio
+                  height={150}
                   style={{
                     filter: 'none',
                     transition: 'filter 0.3s',
@@ -460,7 +548,7 @@ const PlanetsTab: React.FC = () => {
                     width="100%"
                     style={{
                       position: 'absolute',
-                      top: index === 0 ? 0 : 30 * index, // Adjust stacking offset
+                      top: 30 * (index + 1),
                       left: 0,
                       clipPath: 'inset(75% 0% 0% 0%)', // Show bottom 25%
                       transition: 'top 0.3s',

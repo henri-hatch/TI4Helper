@@ -86,3 +86,16 @@ export const attachCardsToPlanet = async (
 ): Promise<void> => {
   await api.post('/planet/attachments', { planetId, cardIds });
 };
+
+// Detach cards from a planet
+export const detachCardsFromPlanet = async (
+  planetId: number,
+  cardIds: number[]
+): Promise<void> => {
+  await api.post('/planet/detach', { planetId, cardIds });
+};
+
+// Delete a planet
+export const deletePlanet = async (planetId: number): Promise<void> => {
+  await api.delete('/planet/delete', { data: { planetId } });
+};

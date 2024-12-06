@@ -439,6 +439,72 @@ export const setupRoutes = (app: Application) => {
     }
   };
 
+  // Detach Cards from a Planet
+  const detachCardsFromPlanet: RequestHandler = async (req, res) => {
+    const { planetId, cardIds } = req.body as { planetId: number; cardIds: number[] };
+
+    if (typeof planetId !== 'number' || !Array.isArray(cardIds)) {
+      res.status(400).send({ error: 'Invalid input data' });
+      return;
+    }
+
+    try {
+      const db = getDatabase();
+
+      const deletePromises = cardIds.map((cardId) => {
+        return db.run(
+          `DELETE FROM planet_attachments WHERE planetId = ? AND cardId = ?`,
+          planetId,
+          cardId
+        );
+      });
+
+      await Promise.all(deletePromises);
+
+      res.status(200).json({ message: 'Attachments removed successfully' });
+    } catch (error) {
+      console.error('Error detaching cards from planet:', error);
+      res.status(500).send({ error: 'Failed to detach cards from planet' });
+    }
+  };
+
+  // Delete Planet
+  const deletePlanet: RequestHandler = async (req, res) => {
+    const { planetId } = req.body as { planetId: number };
+
+    if (typeof planetId !== 'number') {
+      res.status(400).send({ error: 'Invalid planetId' });
+      return;
+    }
+
+    try {
+      const db = getDatabase();
+
+      // Delete attachments first due to foreign key constraints
+      await db.run(
+        `DELETE FROM planet_attachments WHERE planetId = ?`,
+        planetId
+      );
+
+      // Delete planet assignments to players
+      await db.run(
+        `DELETE FROM player_planets WHERE planetId = ?`,
+        planetId
+      );
+
+      // Delete the planet
+      await db.run(
+        `DELETE FROM planets WHERE id = ?`,
+        planetId
+      );
+
+      res.status(200).json({ message: 'Planet deleted successfully' });
+    } catch (error) {
+      console.error('Error deleting planet:', error);
+      res.status(500).send({ error: 'Failed to delete planet' });
+    }
+  };
+
   // Register routes
   app.get('/api/health', healthCheck);
   app.get('/api/game-state', fetchGameState);
@@ -453,4 +519,6 @@ export const setupRoutes = (app: Application) => {
   app.get('/api/planet/:planetId/attachments', getPlanetAttachments);
   app.get('/api/exploration-cards/attach', getAttachTypeExplorationCards);
   app.post('/api/planet/attachments', attachCardsToPlanet);
+  app.post('/api/planet/detach', detachCardsFromPlanet); // Add this line
+  app.delete('/api/planet/delete', deletePlanet); // Add this line
 };
