@@ -62,7 +62,7 @@ export interface PlayerJoinResponse {
 export interface ExplorationCard {
   id: number;
   name: string;
-  type: string;
-  subtype?: string;
+  type: 'hazardous' | 'cultural' | 'industrial';
+  subtype?: 'attach' | 'action' | 'fragment';
   image: string;
 }

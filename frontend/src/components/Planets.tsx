@@ -29,6 +29,8 @@ import {
   explorePlanet,
 } from '../services/api';
 
+const LONG_PRESS_DURATION = 500; // Duration in milliseconds
+
 const PlanetsTab: React.FC = () => {
   const {
     gameState,
@@ -38,7 +40,8 @@ const PlanetsTab: React.FC = () => {
     getPlanetAttachments,
     updatePlayerPlanets,
     handleUpdatePlanetTapped,
-    // ... any other context methods
+    explorePlanet: explorePlanetHandler, // Destructure and rename
+    // ... other context methods
   } = useContext(GameContext);
 
   // Existing state variables
@@ -57,10 +60,10 @@ const PlanetsTab: React.FC = () => {
   // New state variables for Add and Remove Attachments
   const [addAttachmentsModalOpen, setAddAttachmentsModalOpen] = useState<boolean>(false);
   const [removeAttachmentsModalOpen, setRemoveAttachmentsModalOpen] = useState<boolean>(false);
-  
   const [availableAttachments, setAvailableAttachments] = useState<ExplorationCard[]>([]);
   const [selectedAttachmentIds, setSelectedAttachmentIds] = useState<number[]>([]);
   const [attachmentsToRemove, setAttachmentsToRemove] = useState<number[]>([]);
+  const [touchTimeout, setTouchTimeout] = useState<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     if (gameState && playerId) {
@@ -76,39 +79,6 @@ const PlanetsTab: React.FC = () => {
       window.removeEventListener('openSelectPlanetsDialog', openDialog);
     };
   }, [gameState, playerId]);
-
-  // Handle Context Menu
-  const handleContextMenu = (event: MouseEvent, planetId: number) => {
-    event.preventDefault();
-    setContextMenu(
-      contextMenu === null
-        ? {
-            mouseX: event.clientX - 2,
-            mouseY: event.clientY - 4,
-            planetId,
-          }
-        : null,
-    );
-  };
-
-  const handleCloseContextMenu = () => {
-    setContextMenu(null);
-  };
-
-  // Handle Touch Events for Mobile
-  const handleTouchStart = (event: TouchEvent, planetId: number) => {
-    event.preventDefault();
-    const touch = event.touches[0];
-    setContextMenu({
-      mouseX: touch.clientX - 2,
-      mouseY: touch.clientY - 4,
-      planetId,
-    });
-  };
-
-  const handleTouchEnd = () => {
-    handleCloseContextMenu();
-  };
 
   // Toggle Planet Selection
   const togglePlanetSelection = (planetId: number) => {
@@ -140,11 +110,8 @@ const PlanetsTab: React.FC = () => {
 
   // Handle Explore Planet
   const handleExplorePlanet = async (planetId: number) => {
-    if (planetId !== null && playerId) { // Ensure planetId and playerId are valid
-      await explorePlanet(playerId, planetId); // Pass both arguments
-      // Refresh game state or specific planet data if needed
-      const updatedGameState = await apiFetchGameState();
-      setGameState(updatedGameState);
+    if (planetId !== null) {
+      await explorePlanetHandler(planetId); // Use the handler from context
     }
     handleCloseContextMenu();
   };
@@ -173,6 +140,47 @@ const PlanetsTab: React.FC = () => {
       setAttachmentsToRemove([]); // Reset selection
     }
     handleCloseContextMenu();
+  };
+
+  // Other functions like toggleAttachmentSelection, handleConfirmAddAttachments, etc.
+
+  // Handle Context Menu
+  const handleContextMenu = (event: MouseEvent, planetId: number) => {
+    event.preventDefault();
+    setContextMenu(
+      contextMenu === null
+        ? {
+            mouseX: event.clientX - 2,
+            mouseY: event.clientY - 4,
+            planetId,
+          }
+        : null,
+    );
+  };
+
+  const handleCloseContextMenu = () => {
+    setContextMenu(null);
+  };
+
+  // Handle Touch Events for Mobile with Long Press Detection
+  const handleTouchStart = (event: TouchEvent, planetId: number) => {
+    event.preventDefault();
+    const touch = event.touches[0];
+    const timeout = setTimeout(() => {
+      setContextMenu({
+        mouseX: touch.clientX - 2,
+        mouseY: touch.clientY - 4,
+        planetId,
+      });
+    }, LONG_PRESS_DURATION);
+    setTouchTimeout(timeout);
+  };
+
+  const handleTouchEnd = () => {
+    if (touchTimeout) {
+      clearTimeout(touchTimeout);
+      setTouchTimeout(null);
+    }
   };
 
   // Toggle Attachment Selection for Adding
@@ -229,13 +237,14 @@ const PlanetsTab: React.FC = () => {
   };
 
   // Filtered planets based on search query
-  const filteredPlanets = planets.filter(planet =>
+  const filteredPlanets = planets.filter((planet) =>
     planet.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   // Get selected planets from gameState
-  const selectedPlanets = gameState?.players.find((p) => p.playerId === playerId)?.planets
-    .map((pp) => {
+  const selectedPlanets = gameState?.players
+    .find((p) => p.playerId === playerId)
+    ?.planets.map((pp) => {
       const planetInfo = planets.find((p) => p.id === pp.id);
       return planetInfo
         ? {
@@ -273,7 +282,7 @@ const PlanetsTab: React.FC = () => {
               />
               {/* Planets List */}
               <Box display="flex" flexWrap="wrap" gap={2}>
-                {filteredPlanets.map(planet => (
+                {filteredPlanets.map((planet) => (
                   <Box
                     key={planet.id}
                     display="flex"
@@ -367,117 +376,6 @@ const PlanetsTab: React.FC = () => {
         </MenuItem>
       </Menu>
 
-      {/* Add Attachments Modal */}
-      <Dialog
-        open={addAttachmentsModalOpen}
-        onClose={() => setAddAttachmentsModalOpen(false)}
-        maxWidth="sm"
-        fullWidth
-      >
-        <DialogTitle>Add Attachments</DialogTitle>
-        <DialogContent>
-          <Box display="flex" flexWrap="wrap" gap={2}>
-            {availableAttachments.map((card) => (
-              <Box
-                key={card.id}
-                display="flex"
-                flexDirection="column"
-                alignItems="center"
-                onClick={() => toggleAttachmentSelection(card.id)}
-                sx={{
-                  cursor: 'pointer',
-                  border: selectedAttachmentIds.includes(card.id) ? '2px solid #1976d2' : '2px solid transparent',
-                  borderRadius: '8px',
-                  padding: '10px',
-                  width: '100px',
-                  opacity: selectedAttachmentIds.includes(card.id) ? 0.6 : 1,
-                }}
-              >
-                <img
-                  src={`/assets/${card.image}`}
-                  alt={card.name}
-                  width={80}
-                  height={120}
-                  onError={(e) => {
-                    (e.target as HTMLImageElement).src = '/assets/default.jpg';
-                  }}
-                />
-                {/* Optionally, display the card name or other details */}
-                {/* <Typography variant="body2">{card.name}</Typography> */}
-              </Box>
-            ))}
-          </Box>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setAddAttachmentsModalOpen(false)}>Cancel</Button>
-          <Button
-            variant="contained"
-            onClick={handleConfirmAddAttachments}
-            disabled={selectedAttachmentIds.length === 0}
-          >
-            Confirm
-          </Button>
-        </DialogActions>
-      </Dialog>
-
-      {/* Remove Attachments Modal */}
-      <Dialog
-        open={removeAttachmentsModalOpen}
-        onClose={() => setRemoveAttachmentsModalOpen(false)}
-        maxWidth="sm"
-        fullWidth
-      >
-        <DialogTitle>Remove Attachments</DialogTitle>
-        <DialogContent>
-          {attachments.length === 0 ? (
-            <Typography>No attachments to remove.</Typography>
-          ) : (
-            <Box display="flex" flexWrap="wrap" gap={2}>
-              {attachments.map((card) => (
-                <Box
-                  key={card.id}
-                  display="flex"
-                  flexDirection="column"
-                  alignItems="center"
-                  onClick={() => toggleAttachmentToRemove(card.id)}
-                  sx={{
-                    cursor: 'pointer',
-                    border: attachmentsToRemove.includes(card.id) ? '2px solid #d32f2f' : '2px solid transparent',
-                    borderRadius: '8px',
-                    padding: '10px',
-                    width: '100px',
-                    opacity: attachmentsToRemove.includes(card.id) ? 0.6 : 1,
-                  }}
-                >
-                  <img
-                    src={`/assets/${card.image}`}
-                    alt={card.name}
-                    width={80}
-                    height={120}
-                    onError={(e) => {
-                      (e.target as HTMLImageElement).src = '/assets/default.jpg';
-                    }}
-                  />
-                  {/* Optionally, display the card name or other details */}
-                  {/* <Typography variant="body2">{card.name}</Typography> */}
-                </Box>
-              ))}
-            </Box>
-          )}
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setRemoveAttachmentsModalOpen(false)}>Cancel</Button>
-          <Button
-            variant="contained"
-            color="error"
-            onClick={handleConfirmRemoveAttachments}
-            disabled={attachmentsToRemove.length === 0}
-          >
-            Confirm
-          </Button>
-        </DialogActions>
-      </Dialog>
-
       {/* Selected Planets Dashboard */}
       <Box padding="20px">
         <Typography variant="h5" gutterBottom>
@@ -502,28 +400,11 @@ const PlanetsTab: React.FC = () => {
                   opacity: planet.tapped ? 0.6 : 1,
                   width: '100px',
                   height: '150px',
+                  border: '2px solid transparent',
+                  borderRadius: '8px',
+                  padding: '10px',
                 }}
               >
-                {/* Triple Dot Menu - Removed handleShowAttachments */}
-                {planet.attachments && planet.attachments.length > 0 && (
-                  <IconButton
-                    size="small"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      // handleShowAttachments(planet.id); // Removed
-                    }}
-                    sx={{
-                      position: 'absolute',
-                      top: 0,
-                      left: 0,
-                      zIndex: 1,
-                    }}
-                  >
-                    <MoreVertIcon fontSize="small" />
-                  </IconButton>
-                )}
-
-                {/* Planet Image */}
                 <img
                   src={`/assets/planet_cards/${planet.name.toLowerCase()}.face.jpg`}
                   alt={planet.name}
@@ -545,11 +426,13 @@ const PlanetsTab: React.FC = () => {
                     key={attachment.id}
                     src={`/assets/${attachment.image}`}
                     alt={attachment.name}
-                    width="100%"
+                    width="80"
+                    height="120"
                     style={{
                       position: 'absolute',
                       top: 30 * (index + 1),
                       left: 0,
+                      zIndex: 1,
                       clipPath: 'inset(75% 0% 0% 0%)', // Show bottom 25%
                       transition: 'top 0.3s',
                     }}
@@ -559,11 +442,137 @@ const PlanetsTab: React.FC = () => {
                     draggable={false}
                   />
                 ))}
+
+                {/* Triple Dot Menu */}
+                <IconButton
+                  size="small"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    // You can add additional menu actions here
+                  }}
+                  sx={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    zIndex: 1,
+                  }}
+                >
+                  <MoreVertIcon fontSize="small" />
+                </IconButton>
+
+                {/* Tapped Indicator */}
+                {planet.tapped && (
+                  <Typography
+                    variant="caption"
+                    color="error"
+                    sx={{ position: 'absolute', bottom: 4, left: '50%', transform: 'translateX(-50%)' }}
+                  >
+                    Tapped
+                  </Typography>
+                )}
               </Box>
             ))}
           </Box>
         )}
       </Box>
+
+      {/* Add Attachments Modal */}
+      <Dialog
+        open={addAttachmentsModalOpen}
+        onClose={() => setAddAttachmentsModalOpen(false)}
+        maxWidth="md"
+        fullWidth
+      >
+        <DialogTitle>Add Attachments to {selectedPlanetId !== null && planets.find(p => p.id === selectedPlanetId)?.name}</DialogTitle>
+        <DialogContent>
+          {availableAttachments.length === 0 ? (
+            <CircularProgress />
+          ) : (
+            <Box display="flex" flexWrap="wrap" gap={2}>
+              {availableAttachments.map((card) => (
+                <Box key={card.id} textAlign="center">
+                  <img
+                    src={`/assets/${card.image}`}
+                    alt={card.name}
+                    width={100}
+                    height={150}
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).src = '/assets/default.jpg';
+                    }}
+                    draggable={false}
+                  />
+                  <Typography variant="body2">{card.name}</Typography>
+                  <Checkbox
+                    checked={selectedAttachmentIds.includes(card.id)}
+                    onChange={() => toggleAttachmentSelection(card.id)}
+                    icon={<CheckCircleIcon color="disabled" />}
+                    checkedIcon={<CheckCircleIcon color="primary" />}
+                  />
+                </Box>
+              ))}
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setAddAttachmentsModalOpen(false)}>Cancel</Button>
+          <Button
+            variant="contained"
+            onClick={handleConfirmAddAttachments}
+            disabled={selectedAttachmentIds.length === 0}
+          >
+            Confirm
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Remove Attachments Modal */}
+      <Dialog
+        open={removeAttachmentsModalOpen}
+        onClose={() => setRemoveAttachmentsModalOpen(false)}
+        maxWidth="md"
+        fullWidth
+      >
+        <DialogTitle>Remove Attachments from {selectedPlanetId !== null && planets.find(p => p.id === selectedPlanetId)?.name}</DialogTitle>
+        <DialogContent>
+          {attachments.length === 0 ? (
+            <CircularProgress />
+          ) : (
+            <Box display="flex" flexWrap="wrap" gap={2}>
+              {attachments.map((card) => (
+                <Box key={card.id} textAlign="center">
+                  <img
+                    src={`/assets/${card.image}`}
+                    alt={card.name}
+                    width={80}
+                    height={120}
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).src = '/assets/default.jpg';
+                    }}
+                    draggable={false}
+                  />
+                  <Checkbox
+                    checked={attachmentsToRemove.includes(card.id)}
+                    onChange={() => toggleAttachmentToRemove(card.id)}
+                    icon={<CheckCircleIcon color="disabled" />}
+                    checkedIcon={<CheckCircleIcon color="primary" />}
+                  />
+                </Box>
+              ))}
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setRemoveAttachmentsModalOpen(false)}>Cancel</Button>
+          <Button
+            variant="contained"
+            color="error"
+            onClick={handleConfirmRemoveAttachments}
+            disabled={attachmentsToRemove.length === 0}
+          >
+            Confirm
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };

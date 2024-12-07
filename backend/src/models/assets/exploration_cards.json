@@ -16,5 +16,23 @@
     "type": "industrial",
     "subtype": "attach",
     "image": "exploration_cards/propulsion_research_facility.jpg"
+  },
+  {
+    "name": "Expedition",
+    "type": "hazardous",
+    "subtype": "action",
+    "image": "exploration_cards/expedition.1.jpg"
+  },
+  {
+    "name": "Functioning Base",
+    "type": "industrial",
+    "subtype": "action",
+    "image": "exploration_cards/functioning_base.1.jpg"
+  },
+  {
+    "name": "Mercenary Outfit",
+    "type": "cultural",
+    "subtype": "action",
+    "image": "exploration_cards/mercenary_outfit.1.jpg"
   }
 ]

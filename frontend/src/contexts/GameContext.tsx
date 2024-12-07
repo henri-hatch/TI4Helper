@@ -1,7 +1,7 @@
 // src/contexts/GameContext.tsx
 import React, { createContext, useState, useEffect, ReactNode } from 'react';
 import { GameState, Player, Planet, Objective, PlayerJoinResponse, PlayerPlanet, ExplorationCard } from '../types';
-import { fetchGameState as apiFetchGameState, joinGame, fetchPlanets, assignPlanetsToPlayer, updatePlanetTapped as apiUpdatePlanetTapped, explorePlanet, fetchPlanetAttachments } from '../services/api';
+import { fetchGameState as apiFetchGameState, joinGame, fetchPlanets, assignPlanetsToPlayer, updatePlanetTapped as apiUpdatePlanetTapped, explorePlanet as apiExplorePlanet, fetchPlanetAttachments, fetchPlayerExplorationCards } from '../services/api';
 import socket from '../services/socket';
 import axios from 'axios';
 
@@ -25,9 +25,11 @@ interface GameContextType {
   planets: Planet[];
   registerPlayer: (name: string) => Promise<void>;
   updatePlayerPlanets: (planetIds: number[]) => Promise<void>;
-  handleUpdatePlanetTapped: (planetId: number, tapped: boolean) => Promise<void>; // New function
+  handleUpdatePlanetTapped: (planetId: number, tapped: boolean) => Promise<void>;
   explorePlanet: (planetId: number) => Promise<void>;
   getPlanetAttachments: (planetId: number) => Promise<ExplorationCard[]>;
+  playerExplorationCards: ExplorationCard[];
+  setPlayerExplorationCards: React.Dispatch<React.SetStateAction<ExplorationCard[]>>;
 }
 
 export const GameContext = createContext<GameContextType>({
@@ -41,6 +43,8 @@ export const GameContext = createContext<GameContextType>({
   handleUpdatePlanetTapped: async () => {},
   explorePlanet: async () => {},
   getPlanetAttachments: async () => [],
+  playerExplorationCards: [],
+  setPlayerExplorationCards: () => {},
 });
 
 export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
@@ -58,6 +62,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     return null;
   });
   const [planets, setPlanets] = useState<Planet[]>([]);
+  const [playerExplorationCards, setPlayerExplorationCards] = useState<ExplorationCard[]>([]);
 
   useEffect(() => {
     // Fetch initial game state
@@ -200,9 +205,20 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       return;
     }
     try {
-      const card = await explorePlanet(playerId, planetId);
+      const card = await apiExplorePlanet(playerId, planetId);
       console.log('Exploration result:', card);
-      // Update game state or show a modal with the card details
+
+      if (card.subtype === 'attach') {
+        // The backend already attaches the card to the planet
+        // Update game state to reflect changes
+        const updatedGameState = await apiFetchGameState();
+        setGameState(updatedGameState);
+      } else {
+        // For 'action' and 'fragment' cards
+        // Fetch player's exploration cards
+        const explorationCards = await fetchPlayerExplorationCards(playerId);
+        setPlayerExplorationCards(explorationCards);
+      }
     } catch (error) {
       console.error('Error exploring planet:', error);
     }
@@ -231,6 +247,8 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         handleUpdatePlanetTapped,
         explorePlanet: explorePlanetHandler,
         getPlanetAttachments,
+        playerExplorationCards,
+        setPlayerExplorationCards,
       }}
     >
       {children}

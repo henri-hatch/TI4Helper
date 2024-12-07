@@ -138,6 +138,9 @@ const initializeExplorationCards = async () => {
     const data = await fs.readFile(cardsPath, 'utf-8');
     const cards: ExplorationCardInput[] = JSON.parse(data);
 
+    // Clear existing deck
+    await db.run(`DELETE FROM exploration_deck`);
+
     for (const card of cards) {
       let cardId: number;
       const existing = await db.get(`SELECT id FROM exploration_cards WHERE name = ?`, card.name);
@@ -164,7 +167,8 @@ const initializeExplorationCards = async () => {
         card.type
       );
     }
-    console.log('Exploration cards initialized successfully.');
+
+    console.log('Exploration deck initialized.');
   } catch (error) {
     console.error('Error initializing exploration cards:', error);
   }

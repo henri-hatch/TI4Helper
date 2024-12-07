@@ -359,8 +359,8 @@ export const setupRoutes = (app: Application) => {
           planetId,
           card.id
         );
-      } else {
-        // Add the card to the player's exploration cards (e.g., actions, fragments)
+      } else if (card.subtype === 'action' || card.subtype === 'fragment') {
+        // Add the card to the player's exploration cards
         await db.run(
           `INSERT INTO player_exploration_cards (playerId, cardId) VALUES (?, ?)`,
           playerId,
@@ -505,6 +505,31 @@ export const setupRoutes = (app: Application) => {
     }
   };
 
+  // Get Player's Exploration Cards
+  const getPlayerExplorationCards: RequestHandler = async (req, res) => {
+    const { playerId } = req.params;
+
+    if (typeof playerId !== 'string') {
+      res.status(400).send({ error: 'Invalid playerId' });
+      return;
+    }
+
+    try {
+      const db = getDatabase();
+      const cards = await db.all(
+        `SELECT ec.*
+         FROM player_exploration_cards pec
+         JOIN exploration_cards ec ON pec.cardId = ec.id
+         WHERE pec.playerId = ?`,
+        playerId
+      );
+      res.status(200).json({ cards });
+    } catch (error) {
+      console.error("Error fetching player's exploration cards:", error);
+      res.status(500).send({ error: "Failed to fetch player's exploration cards" });
+    }
+  };
+
   // Register routes
   app.get('/api/health', healthCheck);
   app.get('/api/game-state', fetchGameState);
@@ -521,4 +546,5 @@ export const setupRoutes = (app: Application) => {
   app.post('/api/planet/attachments', attachCardsToPlanet);
   app.post('/api/planet/detach', detachCardsFromPlanet); // Add this line
   app.delete('/api/planet/delete', deletePlanet); // Add this line
+  app.get('/api/player/:playerId/exploration-cards', getPlayerExplorationCards); // Add this line
 };

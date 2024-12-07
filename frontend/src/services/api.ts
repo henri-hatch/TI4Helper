@@ -99,3 +99,9 @@ export const detachCardsFromPlanet = async (
 export const deletePlanet = async (planetId: number): Promise<void> => {
   await api.delete('/planet/delete', { data: { planetId } });
 };
+
+// Fetch player's exploration cards
+export const fetchPlayerExplorationCards = async (playerId: string): Promise<ExplorationCard[]> => {
+  const response = await api.get(`/player/${playerId}/exploration-cards`);
+  return response.data.cards;
+};
