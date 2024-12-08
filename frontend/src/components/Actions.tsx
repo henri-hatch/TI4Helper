@@ -64,14 +64,14 @@ const ActionsTab: React.FC = () => {
   const handleRemoveCard = async () => {
     if (contextMenu && playerId) {
       const { cardId } = contextMenu;
-      const updatedSelectedCardIds = selectedCardIds.filter(id => id !== cardId);
+      const updatedCards = playerExplorationCards.filter(card => card.id !== cardId);
+      const updatedCardIds = updatedCards.map(card => card.id);
       try {
-        await updatePlayerExplorationCards(playerId, updatedSelectedCardIds);
-        const updatedCards = await fetchPlayerExplorationCards(playerId);
-        setPlayerExplorationCards(updatedCards);
+        await updatePlayerExplorationCards(playerId, updatedCardIds);
         const updatedGameState = await apiFetchGameState();
         setGameState(updatedGameState);
-        setSelectedCardIds(updatedSelectedCardIds);
+        setPlayerExplorationCards(updatedCards);
+        setSelectedCardIds(updatedCardIds);
         handleCloseContextMenu();
       } catch (error) {
         console.error('Error removing exploration card:', error);
