@@ -1,9 +1,11 @@
 // src/routes/routes.ts
-import { Application, RequestHandler, Request, Response } from 'express';
+import { Application, RequestHandler, Request, Response, NextFunction } from 'express';
 import { getDatabase } from '../models/database';
 import { Server } from 'socket.io';
 import { v4 as uuidv4 } from 'uuid';
 import os from 'os';
+import express from 'express';
+const router = express.Router();
 
 // Define Planet interface to match the database
 interface Planet {
@@ -530,6 +532,85 @@ export const setupRoutes = (app: Application) => {
     }
   };
 
+  // Remove an exploration card
+  const removeExplorationCard = async (req: Request, res: Response) => {
+    const { playerId, id } = req.params;
+    if (!id || !playerId) {
+      res.status(400).json({ error: 'A cardID or playerID is required' });
+      return;
+    }
+
+    try {
+      const db = getDatabase();
+      const result = await db.run(`DELETE FROM exploration_cards WHERE id = ?`, id);
+      if (result.changes === 0) {
+        res.status(404).json({ error: 'Card not found' });
+        return;
+      }
+      res.status(200).json({ message: 'Exploration card removed successfully' });
+    } catch (error) {
+      console.error('Error removing exploration card:', error);
+      res.status(500).json({ error: 'Failed to remove exploration card' });
+    }
+  };
+
+  // Fetch all exploration cards by types
+  const fetchExplorationCardsByType =  async (req: Request, res: Response) => {
+    const { subtypes } = req.query;
+    if (!subtypes || typeof subtypes !== 'string') {
+      res.status(400).json({ error: 'Subtypes query parameter is required and should be a comma-separated string.' });
+      return;
+    }
+
+    const subtypeArray = subtypes.split(',').map(subtype => subtype.trim());
+
+    try {
+      const db = getDatabase();
+      const placeholders = subtypeArray.map(() => '?').join(',');
+      const cards = await db.all(
+        `SELECT * FROM exploration_cards WHERE subtype IN (${placeholders})`,
+        ...subtypeArray
+      );
+      res.status(200).json({ cards });
+    } catch (error) {
+      console.error('Error fetching exploration cards:', error);
+      res.status(500).json({ error: 'Failed to fetch exploration cards.' });
+    }
+  };
+
+  // Update player's exploration cards
+  const updatePlayerExplorationCards: RequestHandler = async (req, res) => {
+    const { playerId, cardIds } = req.body as { playerId: string; cardIds: number[] };
+
+    if (!playerId || !Array.isArray(cardIds)) {
+      res.status(400).json({ error: 'playerId and cardIds are required.' });
+      return;
+    }
+
+    const db = getDatabase();
+    try {
+      await db.run('BEGIN TRANSACTION');
+
+      // Delete existing exploration card assignments for the player
+      await db.run('DELETE FROM player_exploration_cards WHERE playerId = ?', playerId);
+
+      // Insert new exploration card assignments
+      const insertStmt = await db.prepare('INSERT INTO player_exploration_cards (playerId, cardId) VALUES (?, ?)');
+      for (const cardId of cardIds) {
+        await insertStmt.run(playerId, cardId);
+      }
+      await insertStmt.finalize();
+
+      await db.run('COMMIT');
+
+      res.status(200).json({ message: 'Exploration cards updated successfully' });
+    } catch (error) {
+      await db.run('ROLLBACK');
+      console.error('Error updating player exploration cards:', error);
+      res.status(500).json({ error: 'Failed to update exploration cards' });
+    }
+  };
+
   // Register routes
   app.get('/api/health', healthCheck);
   app.get('/api/game-state', fetchGameState);
@@ -544,7 +625,10 @@ export const setupRoutes = (app: Application) => {
   app.get('/api/planet/:planetId/attachments', getPlanetAttachments);
   app.get('/api/exploration-cards/attach', getAttachTypeExplorationCards);
   app.post('/api/planet/attachments', attachCardsToPlanet);
-  app.post('/api/planet/detach', detachCardsFromPlanet); // Add this line
-  app.delete('/api/planet/delete', deletePlanet); // Add this line
-  app.get('/api/player/:playerId/exploration-cards', getPlayerExplorationCards); // Add this line
+  app.post('/api/planet/detach', detachCardsFromPlanet);
+  app.delete('/api/planet/delete', deletePlanet);
+  app.get('/api/player/:playerId/exploration-cards', getPlayerExplorationCards);
+  app.delete('/api/exploration-cards/:id', removeExplorationCard);
+  app.get('/api/exploration-cards-by-type', fetchExplorationCardsByType);
+  app.post('/api/player/update-exploration-cards', updatePlayerExplorationCards);
 };

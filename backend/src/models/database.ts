@@ -42,7 +42,6 @@ export const initializeDatabase = async () => {
       type TEXT NOT NULL CHECK (type IN ('hazardous', 'cultural', 'industrial'))
     );
 
-    -- Player Planets Table
     CREATE TABLE IF NOT EXISTS player_planets (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       playerId TEXT NOT NULL,
@@ -72,7 +71,7 @@ export const initializeDatabase = async () => {
       playerId TEXT NOT NULL,
       cardId INTEGER NOT NULL,
       FOREIGN KEY (playerId) REFERENCES players(playerId),
-      FOREIGN KEY (cardId) REFERENCES exploration_cards(id)
+      FOREIGN KEY (cardId) REFERENCES exploration_cards(id) ON DELETE CASCADE
     );
 
     CREATE TABLE IF NOT EXISTS planet_attachments (
@@ -106,6 +105,7 @@ const initializePlanets = async () => {
       if (!existing) {
         await db.run(
           `INSERT INTO planets (name, resources, influence, legendaryAbility, type) VALUES (?, ?, ?, ?, ?)`,
+
           planet.name,
           planet.resources,
           planet.influence,
@@ -148,6 +148,7 @@ const initializeExplorationCards = async () => {
       if (!existing) {
         const insertResult = await db.run(
           `INSERT INTO exploration_cards (name, type, subtype, image) VALUES (?, ?, ?, ?)`,
+
           card.name,
           card.type,
           card.subtype || null,
@@ -163,6 +164,7 @@ const initializeExplorationCards = async () => {
       // Add card to the exploration deck
       await db.run(
         `INSERT INTO exploration_deck (cardId, type) VALUES (?, ?)`,
+
         cardId,
         card.type
       );

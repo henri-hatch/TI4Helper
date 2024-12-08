@@ -39,15 +39,38 @@ const PlayerDashboard: React.FC = () => {
     setAnchorEl(null);
   };
 
+  // Existing handlers
+  const handleChangeFaction = () => {
+    console.log('Change Faction clicked');
+    // Implement change faction logic here
+    handleMenuClose();
+  };
+
   const handleSelectPlanets = () => {
     const event = new CustomEvent('openSelectPlanetsDialog');
     window.dispatchEvent(event);
     handleMenuClose();
   };
 
-  const handleChangeFaction = () => {
-    console.log('Change Faction clicked');
-    // Implement change faction logic here
+  // New handlers for Actions tab
+  const handleManageStrategyCards = () => {
+    // Placeholder for future functionality
+    handleMenuClose();
+  };
+
+  const handleManageExplorationCards = () => {
+    const event = new Event('openManageExplorationCardsDialog');
+    window.dispatchEvent(event);
+    handleMenuClose();
+  };
+
+  const handleManageRelics = () => {
+    // Placeholder for future functionality
+    handleMenuClose();
+  };
+
+  const handleManageActionCards = () => {
+    // Placeholder for future functionality
     handleMenuClose();
   };
 
@@ -102,7 +125,7 @@ const PlayerDashboard: React.FC = () => {
         </Tabs>
       </AppBar>
 
-      {/* Menu for Actions */}
+      {/* Menu for Actions - Add here for each menu item for each */}
       <Menu
         anchorEl={anchorEl}
         open={Boolean(anchorEl)}
@@ -114,7 +137,14 @@ const PlayerDashboard: React.FC = () => {
         {currentTab === 1 && (
           <MenuItem onClick={handleSelectPlanets}>Manage Planets</MenuItem>
         )}
-        {/* Add more conditional menu items here if needed */}
+        {currentTab === 4 && (
+          <>
+            <MenuItem onClick={handleManageStrategyCards}>Manage Strategy Cards</MenuItem>
+            <MenuItem onClick={handleManageExplorationCards}>Manage Exploration Cards</MenuItem>
+            <MenuItem onClick={handleManageRelics}>Manage Relics</MenuItem>
+            <MenuItem onClick={handleManageActionCards}>Manage Action Cards</MenuItem>
+          </>
+        )}
       </Menu>
 
       {/* Render Tab Content */}

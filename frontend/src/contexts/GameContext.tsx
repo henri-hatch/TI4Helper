@@ -1,7 +1,7 @@
 // src/contexts/GameContext.tsx
 import React, { createContext, useState, useEffect, ReactNode } from 'react';
 import { GameState, Player, Planet, Objective, PlayerJoinResponse, PlayerPlanet, ExplorationCard } from '../types';
-import { fetchGameState as apiFetchGameState, joinGame, fetchPlanets, assignPlanetsToPlayer, updatePlanetTapped as apiUpdatePlanetTapped, explorePlanet as apiExplorePlanet, fetchPlanetAttachments, fetchPlayerExplorationCards } from '../services/api';
+import { fetchGameState as apiFetchGameState, joinGame, fetchPlanets, assignPlanetsToPlayer, updatePlanetTapped as apiUpdatePlanetTapped, explorePlanet as apiExplorePlanet, fetchPlanetAttachments, fetchPlayerExplorationCards, fetchAllExplorationCards, updatePlayerExplorationCards } from '../services/api';
 import socket from '../services/socket';
 import axios from 'axios';
 
@@ -49,18 +49,8 @@ export const GameContext = createContext<GameContextType>({
 
 export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [gameState, setGameState] = useState<GameState | null>(null);
-  const [playerId, setPlayerId] = useState<string | null>(() => {
-    if (isLocalStorageAvailable) {
-      return localStorage.getItem('playerId');
-    }
-    return null;
-  });
-  const [playerName, setPlayerName] = useState<string | null>(() => {
-    if (isLocalStorageAvailable) {
-      return localStorage.getItem('playerName');
-    }
-    return null;
-  });
+  const [playerId, setPlayerId] = useState<string | null>(() => localStorage.getItem('playerId'));
+  const [playerName, setPlayerName] = useState<string | null>(() => localStorage.getItem('playerName'));
   const [planets, setPlanets] = useState<Planet[]>([]);
   const [playerExplorationCards, setPlayerExplorationCards] = useState<ExplorationCard[]>([]);
 

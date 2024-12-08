@@ -45,7 +45,7 @@ export const fetchPlanets = async (): Promise<Planet[]> => {
 
 // New API call to assign planets to a player
 export const assignPlanetsToPlayer = async (playerId: string, planetIds: number[]): Promise<void> => {
-  console.log('Calling assignPlanetsToPlayer API with:', { playerId, planetIds }); // Debugging log
+  console.log('Calling assignPlanetsToPlayer API with:', { playerId, planetIds });
   await api.post('/player/assign-planets', { playerId, planetIds });
 };
 
@@ -95,13 +95,22 @@ export const detachCardsFromPlanet = async (
   await api.post('/planet/detach', { planetId, cardIds });
 };
 
-// Delete a planet
-export const deletePlanet = async (planetId: number): Promise<void> => {
-  await api.delete('/planet/delete', { data: { planetId } });
-};
-
 // Fetch player's exploration cards
 export const fetchPlayerExplorationCards = async (playerId: string): Promise<ExplorationCard[]> => {
   const response = await api.get(`/player/${playerId}/exploration-cards`);
   return response.data.cards;
+};
+
+// Fetch all exploration cards by types
+export const fetchAllExplorationCards = async (subtypes: string[]): Promise<ExplorationCard[]> => {
+  const response = await api.get('/exploration-cards-by-type', { params: { subtypes: subtypes.join(',') } });
+  return response.data.cards;
+};
+
+// Update player's exploration cards
+export const updatePlayerExplorationCards = async (
+  playerId: string,
+  cardIds: number[]
+): Promise<void> => {
+  await api.post('/player/update-exploration-cards', { playerId, cardIds });
 };

@@ -10,7 +10,6 @@ import {
   DialogContent,
   DialogActions,
   Button,
-  IconButton,
   CircularProgress,
   TextField,
   Menu,
@@ -18,18 +17,30 @@ import {
   Checkbox,
 } from '@mui/material';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
-import MoreVertIcon from '@mui/icons-material/MoreVert';
 import { DashboardPlanet, ExplorationCard } from '../types';
 import { 
   fetchGameState as apiFetchGameState, 
   attachCardsToPlanet, 
   detachCardsFromPlanet, 
   fetchAttachTypeCards, 
-  deletePlanet as apiDeletePlanet,
-  explorePlanet,
 } from '../services/api';
+import { styled } from '@mui/material/styles';
 
 const LONG_PRESS_DURATION = 500; // Duration in milliseconds
+
+// Styled component for generic Card
+const Card = styled(Box)<{ selected: boolean }>(({ theme, selected }) => ({
+  position: 'relative',
+  border: selected ? '2px solid #1976d2' : '2px solid transparent',
+  borderRadius: '8px',
+  padding: '10px',
+  width: '100px',
+  height: '150px',
+  cursor: 'pointer',
+  '&:hover': {
+    border: '2px solid #1976d2',
+  },
+}));
 
 const PlanetsTab: React.FC = () => {
   const {
@@ -40,8 +51,7 @@ const PlanetsTab: React.FC = () => {
     getPlanetAttachments,
     updatePlayerPlanets,
     handleUpdatePlanetTapped,
-    explorePlanet: explorePlanetHandler, // Destructure and rename
-    // ... other context methods
+    explorePlanet: explorePlanetHandler,
   } = useContext(GameContext);
 
   // Existing state variables
@@ -64,6 +74,10 @@ const PlanetsTab: React.FC = () => {
   const [selectedAttachmentIds, setSelectedAttachmentIds] = useState<number[]>([]);
   const [attachmentsToRemove, setAttachmentsToRemove] = useState<number[]>([]);
   const [touchTimeout, setTouchTimeout] = useState<ReturnType<typeof setTimeout> | null>(null);
+
+  // State variables for search in modals
+  const [addAttachmentSearchQuery, setAddAttachmentSearchQuery] = useState<string>('');
+  const [removeAttachmentSearchQuery, setRemoveAttachmentSearchQuery] = useState<string>('');
 
   useEffect(() => {
     if (gameState && playerId) {
@@ -141,8 +155,6 @@ const PlanetsTab: React.FC = () => {
     }
     handleCloseContextMenu();
   };
-
-  // Other functions like toggleAttachmentSelection, handleConfirmAddAttachments, etc.
 
   // Handle Context Menu
   const handleContextMenu = (event: MouseEvent, planetId: number) => {
@@ -283,29 +295,16 @@ const PlanetsTab: React.FC = () => {
               {/* Planets List */}
               <Box display="flex" flexWrap="wrap" gap={2}>
                 {filteredPlanets.map((planet) => (
-                  <Box
+                  <Card
                     key={planet.id}
-                    display="flex"
-                    alignItems="center"
-                    flexDirection="column"
+                    selected={selectedPlanetIds.includes(planet.id)}
                     onClick={() => togglePlanetSelection(planet.id)}
-                    sx={{
-                      cursor: 'pointer',
-                      position: 'relative',
-                      border: selectedPlanetIds.includes(planet.id)
-                        ? '2px solid #1976d2'
-                        : '2px solid transparent',
-                      borderRadius: '8px',
-                      padding: '10px',
-                      width: '100px',
-                      height: '150px',
-                    }}
                   >
                     <img
                       src={`/assets/planet_cards/${planet.name.toLowerCase()}.face.jpg`}
                       alt={planet.name}
-                      width={100}
-                      height={150}
+                      width="100%"
+                      height="100%"
                       style={{
                         filter: 'none',
                         transition: 'filter 0.3s',
@@ -319,10 +318,9 @@ const PlanetsTab: React.FC = () => {
                       checked={selectedPlanetIds.includes(planet.id)}
                       icon={<CheckCircleIcon color="disabled" />}
                       checkedIcon={<CheckCircleIcon color="primary" />}
-                      sx={{ position: 'absolute', top: 8, left: 8 }}
-                      onChange={() => togglePlanetSelection(planet.id)}
+                      sx={{ position: 'absolute', bottom: 8, right: 8 }}
                     />
-                  </Box>
+                  </Card>
                 ))}
               </Box>
             </>
@@ -400,9 +398,6 @@ const PlanetsTab: React.FC = () => {
                   opacity: planet.tapped ? 0.6 : 1,
                   width: '100px',
                   height: '150px',
-                  border: '2px solid transparent',
-                  borderRadius: '8px',
-                  padding: '10px',
                 }}
               >
                 <img
@@ -426,13 +421,11 @@ const PlanetsTab: React.FC = () => {
                     key={attachment.id}
                     src={`/assets/${attachment.image}`}
                     alt={attachment.name}
-                    width="80"
-                    height="120"
+                    width="100%"
                     style={{
                       position: 'absolute',
                       top: 30 * (index + 1),
                       left: 0,
-                      zIndex: 1,
                       clipPath: 'inset(75% 0% 0% 0%)', // Show bottom 25%
                       transition: 'top 0.3s',
                     }}
@@ -442,24 +435,6 @@ const PlanetsTab: React.FC = () => {
                     draggable={false}
                   />
                 ))}
-
-                {/* Triple Dot Menu */}
-                <IconButton
-                  size="small"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    // You can add additional menu actions here
-                  }}
-                  sx={{
-                    position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    zIndex: 1,
-                  }}
-                >
-                  <MoreVertIcon fontSize="small" />
-                </IconButton>
-
                 {/* Tapped Indicator */}
                 {planet.tapped && (
                   <Typography
@@ -485,31 +460,45 @@ const PlanetsTab: React.FC = () => {
       >
         <DialogTitle>Add Attachments to {selectedPlanetId !== null && planets.find(p => p.id === selectedPlanetId)?.name}</DialogTitle>
         <DialogContent>
+          {/* Search Bar for Adding Attachments */}
+          <TextField
+            label="Search Attachments"
+            variant="outlined"
+            fullWidth
+            margin="normal"
+            value={addAttachmentSearchQuery}
+            onChange={(e) => setAddAttachmentSearchQuery(e.target.value)}
+          />
           {availableAttachments.length === 0 ? (
             <CircularProgress />
           ) : (
             <Box display="flex" flexWrap="wrap" gap={2}>
-              {availableAttachments.map((card) => (
-                <Box key={card.id} textAlign="center">
-                  <img
-                    src={`/assets/${card.image}`}
-                    alt={card.name}
-                    width={100}
-                    height={150}
-                    onError={(e) => {
-                      (e.target as HTMLImageElement).src = '/assets/default.jpg';
-                    }}
-                    draggable={false}
-                  />
-                  <Typography variant="body2">{card.name}</Typography>
-                  <Checkbox
-                    checked={selectedAttachmentIds.includes(card.id)}
-                    onChange={() => toggleAttachmentSelection(card.id)}
-                    icon={<CheckCircleIcon color="disabled" />}
-                    checkedIcon={<CheckCircleIcon color="primary" />}
-                  />
-                </Box>
-              ))}
+              {availableAttachments
+                .filter(card => card.name.toLowerCase().includes(addAttachmentSearchQuery.toLowerCase()))
+                .map((card) => (
+                  <Card
+                    key={card.id}
+                    selected={selectedAttachmentIds.includes(card.id)}
+                    onClick={() => toggleAttachmentSelection(card.id)}
+                  >
+                    <img
+                      src={`/assets/${card.image}`}
+                      alt={card.name}
+                      width="100%"
+                      height="100%"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).src = '/assets/default.jpg';
+                      }}
+                      draggable={false}
+                    />
+                    <Checkbox
+                      checked={selectedAttachmentIds.includes(card.id)}
+                      icon={<CheckCircleIcon color="disabled" />}
+                      checkedIcon={<CheckCircleIcon color="primary" />}
+                      sx={{ position: 'absolute', bottom: 8, right: 8 }}
+                    />
+                  </Card>
+                ))}
             </Box>
           )}
         </DialogContent>
@@ -534,30 +523,45 @@ const PlanetsTab: React.FC = () => {
       >
         <DialogTitle>Remove Attachments from {selectedPlanetId !== null && planets.find(p => p.id === selectedPlanetId)?.name}</DialogTitle>
         <DialogContent>
+          {/* Search Bar for Removing Attachments */}
+          <TextField
+            label="Search Attachments"
+            variant="outlined"
+            fullWidth
+            margin="normal"
+            value={removeAttachmentSearchQuery}
+            onChange={(e) => setRemoveAttachmentSearchQuery(e.target.value)}
+          />
           {attachments.length === 0 ? (
             <CircularProgress />
           ) : (
             <Box display="flex" flexWrap="wrap" gap={2}>
-              {attachments.map((card) => (
-                <Box key={card.id} textAlign="center">
-                  <img
-                    src={`/assets/${card.image}`}
-                    alt={card.name}
-                    width={80}
-                    height={120}
-                    onError={(e) => {
-                      (e.target as HTMLImageElement).src = '/assets/default.jpg';
-                    }}
-                    draggable={false}
-                  />
-                  <Checkbox
-                    checked={attachmentsToRemove.includes(card.id)}
-                    onChange={() => toggleAttachmentToRemove(card.id)}
-                    icon={<CheckCircleIcon color="disabled" />}
-                    checkedIcon={<CheckCircleIcon color="primary" />}
-                  />
-                </Box>
-              ))}
+              {attachments
+                .filter(card => card.name.toLowerCase().includes(removeAttachmentSearchQuery.toLowerCase()))
+                .map((card) => (
+                  <Card
+                    key={card.id}
+                    selected={attachmentsToRemove.includes(card.id)}
+                    onClick={() => toggleAttachmentToRemove(card.id)}
+                  >
+                    <img
+                      src={`/assets/${card.image}`}
+                      alt={card.name}
+                      width="100%"
+                      height="100%"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).src = '/assets/default.jpg';
+                      }}
+                      draggable={false}
+                    />
+                    <Checkbox
+                      checked={attachmentsToRemove.includes(card.id)}
+                      icon={<CheckCircleIcon color="disabled" />}
+                      checkedIcon={<CheckCircleIcon color="primary" />}
+                      sx={{ position: 'absolute', bottom: 8, right: 8 }}
+                    />
+                  </Card>
+                ))}
             </Box>
           )}
         </DialogContent>
