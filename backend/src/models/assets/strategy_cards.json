@@ -1,0 +1,34 @@
+[
+    {
+        "name": "Leadership",
+        "image": "strategy_cards/leadership.jpg"
+    },
+    {
+        "name": "Diplomacy",
+        "image": "strategy_cards/diplomacy.jpg"
+    },
+    {
+        "name": "Politics",
+        "image": "strategy_cards/politics.jpg"
+    },
+    {
+        "name": "Construction",
+        "image": "strategy_cards/construction.jpg"
+    },
+    {
+        "name": "Trade",
+        "image": "strategy_cards/trade.jpg"
+    },
+    {
+        "name": "Warfare",
+        "image": "strategy_cards/warfare.jpg"
+    },
+    {
+        "name": "Technology",
+        "image": "strategy_cards/technology.jpg"
+    },
+    {
+        "name": "Imperial",
+        "image": "strategy_cards/imperial.jpg"
+    }
+]
