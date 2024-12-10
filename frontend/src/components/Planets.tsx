@@ -67,7 +67,7 @@ const PlanetsTab: React.FC = () => {
   const [attachments, setAttachments] = useState<ExplorationCard[]>([]);
   const [selectedPlanetId, setSelectedPlanetId] = useState<number | null>(null);
   
-  // New state variables for Add and Remove Attachments
+  // State variables for Add and Remove Attachments
   const [addAttachmentsModalOpen, setAddAttachmentsModalOpen] = useState<boolean>(false);
   const [removeAttachmentsModalOpen, setRemoveAttachmentsModalOpen] = useState<boolean>(false);
   const [availableAttachments, setAvailableAttachments] = useState<ExplorationCard[]>([]);
