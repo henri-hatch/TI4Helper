@@ -1,7 +1,7 @@
 // src/contexts/GameContext.tsx
 import React, { createContext, useState, useEffect, ReactNode } from 'react';
-import { GameState, Player, Planet, Objective, PlayerJoinResponse, PlayerPlanet, ExplorationCard } from '../types';
-import { fetchGameState as apiFetchGameState, joinGame, fetchPlanets, assignPlanetsToPlayer, updatePlanetTapped as apiUpdatePlanetTapped, explorePlanet as apiExplorePlanet, fetchPlanetAttachments, fetchPlayerExplorationCards, fetchAllExplorationCards, updatePlayerExplorationCards } from '../services/api';
+import { GameState, Player, Planet, Objective, PlayerJoinResponse, PlayerPlanet, ExplorationCard, StrategyCard } from '../types';
+import { fetchGameState as apiFetchGameState, joinGame, fetchPlanets, assignPlanetsToPlayer, updatePlanetTapped as apiUpdatePlanetTapped, explorePlanet as apiExplorePlanet, fetchPlanetAttachments, fetchPlayerExplorationCards, fetchAllExplorationCards, updatePlayerExplorationCards, fetchPlayerStrategyCards } from '../services/api';
 import socket from '../services/socket';
 import axios from 'axios';
 
@@ -30,6 +30,8 @@ interface GameContextType {
   getPlanetAttachments: (planetId: number) => Promise<ExplorationCard[]>;
   playerExplorationCards: ExplorationCard[];
   setPlayerExplorationCards: React.Dispatch<React.SetStateAction<ExplorationCard[]>>;
+  playerStrategyCards: StrategyCard[];
+  setPlayerStrategyCards: React.Dispatch<React.SetStateAction<StrategyCard[]>>;
 }
 
 export const GameContext = createContext<GameContextType>({
@@ -45,6 +47,8 @@ export const GameContext = createContext<GameContextType>({
   getPlanetAttachments: async () => [],
   playerExplorationCards: [],
   setPlayerExplorationCards: () => {},
+  playerStrategyCards: [],
+  setPlayerStrategyCards: () => {},
 });
 
 export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
@@ -53,6 +57,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [playerName, setPlayerName] = useState<string | null>(() => localStorage.getItem('playerName'));
   const [planets, setPlanets] = useState<Planet[]>([]);
   const [playerExplorationCards, setPlayerExplorationCards] = useState<ExplorationCard[]>([]);
+  const [playerStrategyCards, setPlayerStrategyCards] = useState<StrategyCard[]>([]);
 
   useEffect(() => {
     // Fetch initial game state
@@ -114,6 +119,20 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       socket.off('victory-points-updated', handleVictoryPointsUpdated);
     };
   }, []);
+
+  useEffect(() => {
+    if (playerId) {
+      fetchPlayerExplorationCards(playerId)
+        .then(setPlayerExplorationCards)
+        .catch(console.error);
+      fetchPlayerStrategyCards(playerId)
+        .then(setPlayerStrategyCards)
+        .catch(console.error);
+      apiFetchGameState()
+        .then(setGameState)
+        .catch(console.error);
+    }
+  }, [playerId]);
 
   const registerPlayerHandler = async (name: string) => {
     try {
@@ -239,6 +258,8 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         getPlanetAttachments,
         playerExplorationCards,
         setPlayerExplorationCards,
+        playerStrategyCards,
+        setPlayerStrategyCards,
       }}
     >
       {children}

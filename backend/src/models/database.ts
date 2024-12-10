@@ -82,6 +82,22 @@ export const initializeDatabase = async () => {
       FOREIGN KEY (cardId) REFERENCES exploration_cards(id),
       UNIQUE (planetId, cardId) -- Add this line
     );
+
+    CREATE TABLE IF NOT EXISTS strategy_cards (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL,
+      description TEXT,
+      image TEXT,
+      type TEXT NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS player_strategy_cards (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      playerId TEXT NOT NULL,
+      cardId INTEGER NOT NULL,
+      FOREIGN KEY (playerId) REFERENCES players(playerId) ON DELETE CASCADE,
+      FOREIGN KEY (cardId) REFERENCES strategy_cards(id) ON DELETE CASCADE
+    );
   `);
 
   console.log('Database tables ensured.');
@@ -91,6 +107,11 @@ export const initializeDatabase = async () => {
 
   // Initialize Exploration Cards
   await initializeExplorationCards();
+
+  // Initialize Strategy Cards
+  await initializeStrategyCards();
+
+  console.log('All database tables initialized.');
 };
 
 // Update the planet insertion to include 'type'
@@ -184,9 +205,48 @@ interface ExplorationCardInput {
   image: string; // Relative path to image
 }
 
+// Define StrategyCardInput interface
+interface StrategyCardInput {
+  name: string;
+  image: string;
+  type?: string; // Add other necessary fields if any
+  description?: string; // Assuming there's a description field
+}
+
+const initializeStrategyCards = async () => {
+  try {
+    const db = getDatabase();
+    const strategyCardsPath = path.join(__dirname, 'assets', 'strategy_cards.json');
+    const data = await fs.readFile(strategyCardsPath, 'utf-8');
+    const cards: StrategyCardInput[] = JSON.parse(data);
+
+    for (const card of cards) {
+      const existing = await db.get(`SELECT id FROM strategy_cards WHERE name = ?`, card.name);
+      if (!existing) {
+        await db.run(
+          `INSERT INTO strategy_cards (name, image, type, description) VALUES (?, ?, ?, ?)`,
+          card.name,
+          card.image,
+          card.type || 'Default Type', // Replace 'Default Type' with appropriate default if necessary
+          card.description || 'No description available.' // Replace with appropriate default
+        );
+        console.log(`Inserted strategy card: ${card.name}`);
+      } else {
+        console.log(`Strategy card already exists: ${card.name}`);
+      }
+    }
+
+    console.log('Strategy cards initialized.');
+  } catch (error) {
+    console.error('Error initializing strategy cards:', error);
+  }
+};
+
 export const getDatabase = (): Database<sqlite3.Database, sqlite3.Statement> => {
   if (!db) {
     throw new Error('Database not initialized');
   }
   return db;
 };
+
+export { initializeDatabase };

@@ -66,3 +66,11 @@ export interface ExplorationCard {
   subtype?: 'attach' | 'action' | 'fragment';
   image: string;
 }
+
+export interface StrategyCard {
+  id: number;
+  name: string;
+  description: string;
+  image: string;
+  type: string;
+}

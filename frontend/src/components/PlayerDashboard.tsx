@@ -54,7 +54,8 @@ const PlayerDashboard: React.FC = () => {
 
   // New handlers for Actions tab
   const handleManageStrategyCards = () => {
-    // Placeholder for future functionality
+    const event = new Event('openManageStrategyCardsDialog');
+    window.dispatchEvent(event);
     handleMenuClose();
   };
 
