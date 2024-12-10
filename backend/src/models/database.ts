@@ -88,7 +88,8 @@ export const initializeDatabase = async () => {
       name TEXT NOT NULL,
       description TEXT,
       image TEXT,
-      type TEXT NOT NULL
+      type TEXT NOT NULL,
+      tradeGoodCount INTEGER NOT NULL DEFAULT 0
     );
 
     CREATE TABLE IF NOT EXISTS player_strategy_cards (
@@ -108,7 +109,6 @@ export const initializeDatabase = async () => {
   // Initialize Exploration Cards
   await initializeExplorationCards();
 
-  // Initialize Strategy Cards
   await initializeStrategyCards();
 
   console.log('All database tables initialized.');
@@ -224,11 +224,12 @@ const initializeStrategyCards = async () => {
       const existing = await db.get(`SELECT id FROM strategy_cards WHERE name = ?`, card.name);
       if (!existing) {
         await db.run(
-          `INSERT INTO strategy_cards (name, image, type, description) VALUES (?, ?, ?, ?)`,
+          `INSERT INTO strategy_cards (name, image, type, description, tradeGoodCount) VALUES (?, ?, ?, ?, ?)`,
           card.name,
           card.image,
           card.type || 'Default Type', // Replace 'Default Type' with appropriate default if necessary
-          card.description || 'No description available.' // Replace with appropriate default
+          card.description || 'No description available.', // Replace with appropriate default
+          0 // Initialize tradeGoodCount to 0
         );
         console.log(`Inserted strategy card: ${card.name}`);
       } else {
@@ -248,5 +249,3 @@ export const getDatabase = (): Database<sqlite3.Database, sqlite3.Statement> => 
   }
   return db;
 };
-
-export { initializeDatabase };

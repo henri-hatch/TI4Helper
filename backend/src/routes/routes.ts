@@ -619,7 +619,7 @@ export const setupRoutes = (app: Application) => {
       res.status(200).json({ cards });
     } catch (error) {
       console.error('Error fetching strategy cards:', error);
-      res.status(500).json({ error: 'Failed to fetch strategy cards' });
+      res.status(500).json({ error: 'Failed to fetch strategy cards.' });
     }
   };
 
@@ -672,6 +672,38 @@ export const setupRoutes = (app: Application) => {
     }
   };
 
+  // Update trade good count for a strategy card
+  const updateStrategyCardTradeGood: RequestHandler = async (req, res) => {
+    const { cardId, increment } = req.body as { cardId: number; increment: boolean };
+
+    if (typeof cardId !== 'number' || typeof increment !== 'boolean') {
+      res.status(400).json({ error: 'Invalid input data.' });
+      return;
+    }
+
+    const db = getDatabase();
+
+    try {
+      const card = await db.get(`SELECT tradeGoodCount FROM strategy_cards WHERE id = ?`, cardId);
+      if (!card) {
+        res.status(404).json({ error: 'Strategy card not found.' });
+        return;
+      }
+
+      const newCount = increment ? card.tradeGoodCount + 1 : Math.max(card.tradeGoodCount - 1, 0);
+      await db.run(`UPDATE strategy_cards SET tradeGoodCount = ? WHERE id = ?`, newCount, cardId);
+
+      // Emit socket event for live updates
+      const io: Server = req.app.get('io');
+      io.emit('tradeGoodUpdated', { cardId, tradeGoodCount: newCount });
+
+      res.status(200).json({ cardId, tradeGoodCount: newCount });
+    } catch (error) {
+      console.error('Error updating trade good count:', error);
+      res.status(500).json({ error: 'Failed to update trade good count.' });
+    }
+  };
+
   // Register routes
   app.get('/api/health', healthCheck);
   app.get('/api/game-state', fetchGameState);
@@ -695,4 +727,5 @@ export const setupRoutes = (app: Application) => {
   app.get('/api/strategy-cards', fetchAllStrategyCards);
   app.get('/api/player/:playerId/strategy-cards', fetchPlayerStrategyCardsHandler);
   app.post('/api/player/update-strategy-cards', updatePlayerStrategyCardsHandler);
+  router.post('/strategy-card/update-trade-good', updateStrategyCardTradeGood);
 };
