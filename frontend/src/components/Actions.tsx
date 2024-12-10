@@ -13,8 +13,11 @@ import {
   Button,
   CircularProgress,
   Checkbox,
+  IconButton,
 } from '@mui/material';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import AddIcon from '@mui/icons-material/Add';
+import RemoveIcon from '@mui/icons-material/Remove';
 import {
   fetchAllExplorationCards,
   fetchPlayerExplorationCards,
@@ -22,10 +25,12 @@ import {
   fetchAllStrategyCards,
   fetchPlayerStrategyCards,
   updatePlayerStrategyCards,
+  updateStrategyCardTradeGood,
   fetchGameState as apiFetchGameState,
 } from '../services/api';
 import { ExplorationCard, StrategyCard } from '../types';
 import { styled } from '@mui/material/styles';
+import io from 'socket.io-client';
 
 const LONG_PRESS_DURATION = 500;
 
@@ -42,6 +47,9 @@ const Card = styled(Box)<{ selected: boolean }>(({ theme, selected }) => ({
     border: '2px solid #1976d2',
   },
 }));
+
+// Initialize Socket.IO client
+const socket = io('http://localhost:PORT'); // Replace PORT with your backend port
 
 const ActionsTab: React.FC = () => {
   const {
@@ -296,6 +304,25 @@ const ActionsTab: React.FC = () => {
     setStrategyContextMenu(null);
   };
 
+  // Handlers for Trade Good Increment/Decrement
+  const handleIncrementTradeGood = async (cardId: number) => {
+    try {
+      await updateStrategyCardTradeGood(cardId, true);
+      // The Socket.IO listener will handle updating the state
+    } catch (error) {
+      console.error('Error incrementing trade good:', error);
+    }
+  };
+
+  const handleDecrementTradeGood = async (cardId: number) => {
+    try {
+      await updateStrategyCardTradeGood(cardId, false);
+      // The Socket.IO listener will handle updating the state
+    } catch (error) {
+      console.error('Error decrementing trade good:', error);
+    }
+  };
+
   useEffect(() => {
     // Event listener for opening Exploration Cards Dialog
     const openExplorationDialog = () => {
@@ -309,10 +336,20 @@ const ActionsTab: React.FC = () => {
     };
     window.addEventListener('openManageStrategyCardsDialog', openStrategyDialog);
 
+    // Listen for tradeGoodUpdated events
+    socket.on('tradeGoodUpdated', ({ cardId, tradeGoodCount }) => {
+      setStrategyAllCards((prevCards) =>
+        prevCards.map((card) =>
+          card.id === cardId ? { ...card, tradeGoodCount } : card
+        )
+      );
+    });
+
     // Cleanup event listeners on unmount
     return () => {
       window.removeEventListener('openManageExplorationCardsDialog', openExplorationDialog);
       window.removeEventListener('openManageStrategyCardsDialog', openStrategyDialog);
+      socket.off('tradeGoodUpdated');
     };
   }, []);
 
@@ -436,28 +473,67 @@ const ActionsTab: React.FC = () => {
           ) : (
             <Box display="flex" flexWrap="wrap" gap={2}>
               {strategyAllCards.map(card => (
-                <Card
+                <Box
                   key={card.id}
-                  selected={selectedStrategyCardIds.includes(card.id)}
-                  onClick={() => toggleStrategyCard(card.id)}
+                  position="relative"
+                  sx={{
+                    width: '120px',
+                    textAlign: 'center',
+                  }}
                 >
-                  <img
-                    src={`/assets/${card.image}`}
-                    alt={card.name}
-                    width="100%"
-                    height="100%"
-                    onError={(e) => {
-                      (e.target as HTMLImageElement).src = '/assets/default.jpg';
-                    }}
-                    draggable={false}
-                  />
-                  <Checkbox
-                    checked={selectedStrategyCardIds.includes(card.id)}
-                    icon={<CheckCircleIcon color="disabled" />}
-                    checkedIcon={<CheckCircleIcon color="primary" />}
-                    sx={{ position: 'absolute', top: 8, right: 8 }}
-                  />
-                </Card>
+                  <Card
+                    selected={selectedStrategyCardIds.includes(card.id)}
+                    onClick={() => toggleStrategyCard(card.id)}
+                    sx={{ position: 'relative', cursor: 'pointer' }}
+                  >
+                    <img
+                      src={`/assets/${card.image}`}
+                      alt={card.name}
+                      width="100%"
+                      height="100px"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).src = '/assets/default.jpg';
+                      }}
+                      draggable={false}
+                    />
+                    <Checkbox
+                      checked={selectedStrategyCardIds.includes(card.id)}
+                      icon={<CheckCircleIcon color="disabled" />}
+                      checkedIcon={<CheckCircleIcon color="primary" />}
+                      sx={{ position: 'absolute', top: 8, right: 8 }}
+                    />
+                  </Card>
+                  <Box
+                    display="flex"
+                    alignItems="center"
+                    justifyContent="center"
+                    mt={1}
+                  >
+                    <img
+                      src="/assets/tokens/trade_good.jpg"
+                      alt="Trade Good"
+                      width="24px"
+                      height="24px"
+                      style={{ borderRadius: '50%' }}
+                    />
+                    <Typography variant="body1" ml={1} mr={1}>
+                      {card.tradeGoodCount}
+                    </Typography>
+                    <IconButton
+                      size="small"
+                      onClick={() => handleIncrementTradeGood(card.id)}
+                    >
+                      <AddIcon fontSize="small" />
+                    </IconButton>
+                    <IconButton
+                      size="small"
+                      onClick={() => handleDecrementTradeGood(card.id)}
+                      disabled={card.tradeGoodCount === 0}
+                    >
+                      <RemoveIcon fontSize="small" />
+                    </IconButton>
+                  </Box>
+                </Box>
               ))}
             </Box>
           )}

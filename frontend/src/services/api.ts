@@ -131,3 +131,12 @@ export const fetchPlayerStrategyCards = async (playerId: string): Promise<Strate
 export const updatePlayerStrategyCards = async (playerId: string, cardIds: number[]): Promise<void> => {
   await api.post('/player/update-strategy-cards', { playerId, cardIds });
 };
+
+// Update trade good count for a strategy card
+export const updateStrategyCardTradeGood = async (
+  cardId: number,
+  increment: boolean
+): Promise<{ cardId: number; tradeGoodCount: number }> => {
+  const response = await api.post('/strategy-card/update-trade-good', { cardId, increment });
+  return response.data;
+};

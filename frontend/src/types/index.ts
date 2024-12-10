@@ -73,4 +73,5 @@ export interface StrategyCard {
   description: string;
   image: string;
   type: string;
+  tradeGoodCount: number;
 }
