@@ -190,7 +190,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
-  // New function to handle planet tapped status updates
+  // Function to handle planet tapped status updates
   const handleUpdatePlanetTapped = async (planetId: number, tapped: boolean) => {
     if (!playerId) {
       console.error('No player ID available.');

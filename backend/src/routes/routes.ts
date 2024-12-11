@@ -727,5 +727,5 @@ export const setupRoutes = (app: Application) => {
   app.get('/api/strategy-cards', fetchAllStrategyCards);
   app.get('/api/player/:playerId/strategy-cards', fetchPlayerStrategyCardsHandler);
   app.post('/api/player/update-strategy-cards', updatePlayerStrategyCardsHandler);
-  router.post('/strategy-card/update-trade-good', updateStrategyCardTradeGood);
+  app.post('/api/strategy-card/update-trade-good', updateStrategyCardTradeGood);
 };

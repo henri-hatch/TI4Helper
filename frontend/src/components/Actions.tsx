@@ -34,6 +34,9 @@ import io from 'socket.io-client';
 
 const LONG_PRESS_DURATION = 500;
 
+// Initialize Socket.IO client
+const socket = io('http://localhost:PORT'); // Replace PORT with your backend port
+
 // Styled component for generic Card
 const Card = styled(Box)<{ selected: boolean }>(({ theme, selected }) => ({
   position: 'relative',
@@ -47,9 +50,6 @@ const Card = styled(Box)<{ selected: boolean }>(({ theme, selected }) => ({
     border: '2px solid #1976d2',
   },
 }));
-
-// Initialize Socket.IO client
-const socket = io('http://localhost:PORT'); // Replace PORT with your backend port
 
 const ActionsTab: React.FC = () => {
   const {
@@ -307,19 +307,41 @@ const ActionsTab: React.FC = () => {
   // Handlers for Trade Good Increment/Decrement
   const handleIncrementTradeGood = async (cardId: number) => {
     try {
+      // Optimistically update local state
+      setStrategyAllCards(prevCards =>
+        prevCards.map(card =>
+          card.id === cardId
+            ? { ...card, tradeGoodCount: card.tradeGoodCount + 1 }
+            : card
+        )
+      );
+      
+      // Update the backend
       await updateStrategyCardTradeGood(cardId, true);
-      // The Socket.IO listener will handle updating the state
+      // No need to handle Socket.IO event here as it will sync other clients
     } catch (error) {
       console.error('Error incrementing trade good:', error);
+      // Optionally, rollback the optimistic update if needed
     }
   };
 
   const handleDecrementTradeGood = async (cardId: number) => {
     try {
+      // Optimistically update local state
+      setStrategyAllCards(prevCards =>
+        prevCards.map(card =>
+          card.id === cardId && card.tradeGoodCount > 0
+            ? { ...card, tradeGoodCount: card.tradeGoodCount - 1 }
+            : card
+        )
+      );
+      
+      // Update the backend
       await updateStrategyCardTradeGood(cardId, false);
-      // The Socket.IO listener will handle updating the state
+      // No need to handle Socket.IO event here as it will sync other clients
     } catch (error) {
       console.error('Error decrementing trade good:', error);
+      // Optionally, rollback the optimistic update if needed
     }
   };
 
@@ -336,19 +358,24 @@ const ActionsTab: React.FC = () => {
     };
     window.addEventListener('openManageStrategyCardsDialog', openStrategyDialog);
 
+    // Cleanup event listeners on unmount
+    return () => {
+      window.removeEventListener('openManageExplorationCardsDialog', openExplorationDialog);
+      window.removeEventListener('openManageStrategyCardsDialog', openStrategyDialog);
+    };
+  }, []);
+
+  useEffect(() => {
     // Listen for tradeGoodUpdated events
     socket.on('tradeGoodUpdated', ({ cardId, tradeGoodCount }) => {
-      setStrategyAllCards((prevCards) =>
-        prevCards.map((card) =>
+      setStrategyAllCards(prevCards =>
+        prevCards.map(card =>
           card.id === cardId ? { ...card, tradeGoodCount } : card
         )
       );
     });
 
-    // Cleanup event listeners on unmount
     return () => {
-      window.removeEventListener('openManageExplorationCardsDialog', openExplorationDialog);
-      window.removeEventListener('openManageStrategyCardsDialog', openStrategyDialog);
       socket.off('tradeGoodUpdated');
     };
   }, []);
