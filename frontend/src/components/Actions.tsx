@@ -14,6 +14,7 @@ import {
   CircularProgress,
   Checkbox,
   IconButton,
+  TextField,
 } from '@mui/material';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import AddIcon from '@mui/icons-material/Add';
@@ -72,6 +73,7 @@ const ActionsTab: React.FC = () => {
   const [selectedExplorationCardIds, setSelectedExplorationCardIds] = useState<number[]>([]);
   const [explorationLoading, setExplorationLoading] = useState<boolean>(false);
   const [explorationTouchTimeout, setExplorationTouchTimeout] = useState<ReturnType<typeof setTimeout> | null>(null);
+  const [explorationSearchQuery, setExplorationSearchQuery] = useState<string>('');
 
   // State for Strategy Cards
   const [strategyContextMenu, setStrategyContextMenu] = useState<{
@@ -503,21 +505,18 @@ const ActionsTab: React.FC = () => {
                 <Box
                   key={card.id}
                   position="relative"
-                  sx={{
-                    width: '120px',
-                    textAlign: 'center',
-                  }}
+                  sx={{ width: '120px', textAlign: 'center' }}
                 >
                   <Card
                     selected={selectedStrategyCardIds.includes(card.id)}
                     onClick={() => toggleStrategyCard(card.id)}
-                    sx={{ position: 'relative', cursor: 'pointer' }}
+                    sx={{ cursor: 'pointer' }}
                   >
                     <img
                       src={`/assets/${card.image}`}
                       alt={card.name}
-                      width="100%"
-                      height="100px"
+                      width="100px"
+                      height="150px"
                       onError={(e) => {
                         (e.target as HTMLImageElement).src = '/assets/default.jpg';
                       }}
@@ -588,31 +587,49 @@ const ActionsTab: React.FC = () => {
               <CircularProgress />
             </Box>
           ) : (
-            <Box display="flex" flexWrap="wrap" gap={2}>
-              {explorationAllCards.map(card => (
-                <Card
-                  key={card.id}
-                  selected={selectedExplorationCardIds.includes(card.id)}
-                  onClick={() => toggleExplorationCard(card.id)}
-                >
-                  <img
-                    src={`/assets/${card.image}`}
-                    alt={card.name}
-                    width="100%"
-                    height="100%"
-                    onError={(e) => {
-                      (e.target as HTMLImageElement).src = '/assets/default.jpg';
-                    }}
-                    draggable={false}
-                  />
-                  <Checkbox
-                    checked={selectedExplorationCardIds.includes(card.id)}
-                    icon={<CheckCircleIcon color="disabled" />}
-                    checkedIcon={<CheckCircleIcon color="primary" />}
-                    sx={{ position: 'absolute', top: 8, right: 8 }}
-                  />
-                </Card>
-              ))}
+            <Box display="flex" flexDirection="column" gap={2}>
+              
+              {/* Search Bar for Exploration Cards */}
+              <TextField
+                label="Search Exploration Cards"
+                variant="outlined"
+                fullWidth
+                margin="normal"
+                value={explorationSearchQuery}
+                onChange={(e) => setExplorationSearchQuery(e.target.value)}
+              />
+              
+              {/* Exploration Cards List */}
+              <Box display="flex" flexWrap="wrap" gap={2}>
+                {explorationAllCards
+                  .filter(card => card.name.toLowerCase().includes(explorationSearchQuery.toLowerCase()))
+                  .map(card => (
+                    <Box key={card.id} position="relative" width="100px" textAlign="center">
+                      <Card
+                        selected={selectedExplorationCardIds.includes(card.id)}
+                        onClick={() => toggleExplorationCard(card.id)}
+                        sx={{ cursor: 'pointer' }}
+                      >
+                        <img
+                          src={`/assets/${card.image}`}
+                          alt={card.name}
+                          width="100px"
+                          height="150px"
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).src = '/assets/default.jpg';
+                          }}
+                          draggable={false}
+                        />
+                        <Checkbox
+                          checked={selectedExplorationCardIds.includes(card.id)}
+                          icon={<CheckCircleIcon color="disabled" />}
+                          checkedIcon={<CheckCircleIcon color="primary" />}
+                          sx={{ position: 'absolute', top: 8, right: 8 }}
+                        />
+                      </Card>
+                    </Box>
+                  ))}
+              </Box>
             </Box>
           )}
         </DialogContent>
