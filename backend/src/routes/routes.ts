@@ -704,6 +704,70 @@ export const setupRoutes = (app: Application) => {
     }
   };
 
+  // Fetch all action cards
+  const fetchAllActionCards: RequestHandler = async (req, res) => {
+    try {
+      const db = await getDatabase();
+      const cards = await db.all(`SELECT * FROM action_cards`);
+      res.status(200).json({ cards });
+    } catch (error) {
+      console.error('Error fetching action cards:', error);
+      res.status(500).json({ error: 'Failed to fetch action cards.' });
+    }
+  };
+
+  // Fetch player's action cards
+  const fetchPlayerActionCardsHandler: RequestHandler = async (req, res) => {
+    const { playerId } = req.params;
+
+    try {
+      const db = await getDatabase();
+      const cards = await db.all(
+        `SELECT ac.*
+         FROM player_action_cards pac
+         JOIN action_cards ac ON pac.cardId = ac.id
+         WHERE pac.playerId = ?`,
+        playerId
+      );
+      res.status(200).json({ cards });
+    } catch (error) {
+      console.error("Error fetching player's action cards:", error);
+      res.status(500).send({ error: "Failed to fetch player's action cards" });
+    }
+  };
+
+  // Update player's action cards
+  const updatePlayerActionCardsHandler: RequestHandler = async (req, res) => {
+    const { playerId, actionCardIds } = req.body as { playerId: string; actionCardIds: number[] };
+
+    if (!playerId || !Array.isArray(actionCardIds)) {
+      res.status(400).json({ error: 'playerId and actionCardIds are required.' });
+      return;
+    }
+
+    const db = await getDatabase();
+    try {
+      await db.run('BEGIN TRANSACTION');
+
+      // Delete existing action card assignments for the player
+      await db.run('DELETE FROM player_action_cards WHERE playerId = ?', playerId);
+
+      // Insert new action card assignments
+      const insertStmt = await db.prepare('INSERT INTO player_action_cards (playerId, cardId) VALUES (?, ?)');
+      for (const cardId of actionCardIds) {
+        await insertStmt.run(playerId, cardId);
+      }
+      await insertStmt.finalize();
+
+      await db.run('COMMIT');
+      res.status(200).json({ message: 'Action cards updated successfully' });
+    } catch (error) {
+      await db.run('ROLLBACK');
+      console.error('Error updating player action cards:', error);
+      res.status(500).json({ error: 'Failed to update action cards' });
+    }
+  };
+
   // Register routes
   app.get('/api/health', healthCheck);
   app.get('/api/game-state', fetchGameState);
@@ -728,4 +792,7 @@ export const setupRoutes = (app: Application) => {
   app.get('/api/player/:playerId/strategy-cards', fetchPlayerStrategyCardsHandler);
   app.post('/api/player/update-strategy-cards', updatePlayerStrategyCardsHandler);
   app.post('/api/strategy-card/update-trade-good', updateStrategyCardTradeGood);
+  app.get('/api/action-cards', fetchAllActionCards);
+  app.get('/api/player/:playerId/action-cards', fetchPlayerActionCardsHandler);
+  app.post('/api/player/update-action-cards', updatePlayerActionCardsHandler);
 };

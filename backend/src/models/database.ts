@@ -86,9 +86,7 @@ export const initializeDatabase = async () => {
     CREATE TABLE IF NOT EXISTS strategy_cards (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       name TEXT NOT NULL,
-      description TEXT,
       image TEXT,
-      type TEXT NOT NULL,
       tradeGoodCount INTEGER NOT NULL DEFAULT 0
     );
 
@@ -99,17 +97,28 @@ export const initializeDatabase = async () => {
       FOREIGN KEY (playerId) REFERENCES players(playerId) ON DELETE CASCADE,
       FOREIGN KEY (cardId) REFERENCES strategy_cards(id) ON DELETE CASCADE
     );
+
+    CREATE TABLE IF NOT EXISTS action_cards (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL,
+      image TEXT NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS player_action_cards (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      playerId TEXT NOT NULL,
+      cardId INTEGER NOT NULL,
+      FOREIGN KEY (playerId) REFERENCES players(playerId) ON DELETE CASCADE,
+      FOREIGN KEY (cardId) REFERENCES action_cards(id) ON DELETE CASCADE
+    );
   `);
 
   console.log('Database tables ensured.');
 
-  // Initialize Planets
   await initializePlanets();
-
-  // Initialize Exploration Cards
   await initializeExplorationCards();
-
   await initializeStrategyCards();
+  await initializeActionCards();
 
   console.log('All database tables initialized.');
 };
@@ -169,7 +178,6 @@ const initializeExplorationCards = async () => {
       if (!existing) {
         const insertResult = await db.run(
           `INSERT INTO exploration_cards (name, type, subtype, image) VALUES (?, ?, ?, ?)`,
-
           card.name,
           card.type,
           card.subtype || null,
@@ -185,7 +193,6 @@ const initializeExplorationCards = async () => {
       // Add card to the exploration deck
       await db.run(
         `INSERT INTO exploration_deck (cardId, type) VALUES (?, ?)`,
-
         cardId,
         card.type
       );
@@ -209,8 +216,6 @@ interface ExplorationCardInput {
 interface StrategyCardInput {
   name: string;
   image: string;
-  type?: string; // Add other necessary fields if any
-  description?: string; // Assuming there's a description field
 }
 
 const initializeStrategyCards = async () => {
@@ -224,12 +229,10 @@ const initializeStrategyCards = async () => {
       const existing = await db.get(`SELECT id FROM strategy_cards WHERE name = ?`, card.name);
       if (!existing) {
         await db.run(
-          `INSERT INTO strategy_cards (name, image, type, description, tradeGoodCount) VALUES (?, ?, ?, ?, ?)`,
+          `INSERT INTO strategy_cards (name, image, tradeGoodCount) VALUES (?, ?, ?)`,
           card.name,
           card.image,
-          card.type || 'Default Type', // Replace 'Default Type' with appropriate default if necessary
-          card.description || 'No description available.', // Replace with appropriate default
-          0 // Initialize tradeGoodCount to 0
+          0
         );
         console.log(`Inserted strategy card: ${card.name}`);
       } else {
@@ -242,6 +245,42 @@ const initializeStrategyCards = async () => {
     console.error('Error initializing strategy cards:', error);
   }
 };
+
+const initializeActionCards = async () => {
+  try {
+    const db = await getDatabase();
+    const cardsPath = path.join(__dirname, 'assets', 'action_cards.json');
+    const data = await fs.readFile(cardsPath, 'utf-8');
+    const cards: ActionCardInput[] = JSON.parse(data);
+
+    // Clear existing action cards
+    await db.run(`DELETE FROM action_cards`);
+
+    for (const card of cards) {
+      const existing = await db.get(`SELECT id FROM action_cards WHERE name = ?`, card.name);
+      if (!existing) {
+        const insertResult = await db.run(
+          `INSERT INTO action_cards (name, image) VALUES (?, ?)`,
+          card.name,
+          card.image
+        );
+        console.log(`Inserted action card: ${card.name}`);
+      } else {
+        console.log(`Action card already exists: ${card.name}`);
+      }
+    }
+
+    console.log('Action cards initialized.');
+  } catch (error) {
+    console.error('Error initializing action cards:', error);
+  }
+};
+
+// Define ActionCardInput interface
+interface ActionCardInput {
+  name: string;
+  image: string;
+}
 
 export const getDatabase = (): Database<sqlite3.Database, sqlite3.Statement> => {
   if (!db) {

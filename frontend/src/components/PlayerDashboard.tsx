@@ -71,7 +71,8 @@ const PlayerDashboard: React.FC = () => {
   };
 
   const handleManageActionCards = () => {
-    // Placeholder for future functionality
+    const event = new Event('openManageActionCardsDialog');
+    window.dispatchEvent(event);
     handleMenuClose();
   };
 

@@ -1,0 +1,22 @@
+[
+    {
+        "name": "Ancient Burial Sites",
+        "image": "action_cards/ancient_burial_sites.jpg"
+    },
+    {
+        "name": "Divert Funding",
+        "image": "action_cards/divert_funding.jpg"
+    },
+    {
+        "name": "Political Stability",
+        "image": "action_cards/political_stability.jpg"
+    },
+    {
+        "name": "Solar Flare",
+        "image": "action_cards/solar_flare.jpg"
+    },
+    {
+        "name": "Veto",
+        "image": "action_cards/veto.jpg"
+    }
+]

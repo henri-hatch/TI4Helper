@@ -1,6 +1,6 @@
 // src/services/api.ts
 import axios from 'axios';
-import { GameState, PlayerJoinResponse, Planet, ExplorationCard, StrategyCard } from '../types';
+import { GameState, PlayerJoinResponse, Planet, ExplorationCard, StrategyCard, ActionCard } from '../types';
 
 // Dynamically set the backend URL based on the current window location
 const BACKEND_PORT = '5000'; // Ensure this matches your backend's port
@@ -139,4 +139,21 @@ export const updateStrategyCardTradeGood = async (
 ): Promise<{ cardId: number; tradeGoodCount: number }> => {
   const response = await api.post('/strategy-card/update-trade-good', { cardId, increment });
   return response.data;
+};
+
+// Fetch all Action Cards
+export const fetchAllActionCards = async (): Promise<ActionCard[]> => {
+  const response = await api.get('/action-cards');
+  return response.data.cards;
+};
+
+// Fetch Player's Action Cards
+export const fetchPlayerActionCards = async (playerId: string): Promise<ActionCard[]> => {
+  const response = await api.get(`/player/${playerId}/action-cards`);
+  return response.data.cards;
+};
+
+// Update Player's Action Cards
+export const updatePlayerActionCards = async (playerId: string, actionCardIds: number[]): Promise<void> => {
+  await api.post('/player/update-action-cards', { playerId, actionCardIds });
 };

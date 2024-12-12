@@ -28,8 +28,11 @@ import {
   updatePlayerStrategyCards,
   updateStrategyCardTradeGood,
   fetchGameState as apiFetchGameState,
+  fetchAllActionCards,
+  fetchPlayerActionCards,
+  updatePlayerActionCards,
 } from '../services/api';
-import { ExplorationCard, StrategyCard } from '../types';
+import { ExplorationCard, StrategyCard, ActionCard } from '../types';
 import { styled } from '@mui/material/styles';
 
 const LONG_PRESS_DURATION = 500;
@@ -55,6 +58,8 @@ const ActionsTab: React.FC = () => {
     setPlayerExplorationCards,
     playerStrategyCards,
     setPlayerStrategyCards,
+    playerActionCards,
+    setPlayerActionCards,
     setGameState,
   } = useContext(GameContext);
 
@@ -83,12 +88,26 @@ const ActionsTab: React.FC = () => {
   const [strategyLoading, setStrategyLoading] = useState<boolean>(false);
   const [strategyTouchTimeout, setStrategyTouchTimeout] = useState<ReturnType<typeof setTimeout> | null>(null);
 
+  // State for Action Cards
+  const [actionContextMenu, setActionContextMenu] = useState<{
+    mouseX: number;
+    mouseY: number;
+    cardId: number;
+  } | null>(null);
+  const [actionOpen, setActionOpen] = useState<boolean>(false);
+  const [actionAllCards, setActionAllCards] = useState<ActionCard[]>([]);
+  const [selectedActionCardIds, setSelectedActionCardIds] = useState<number[]>([]);
+  const [actionLoading, setActionLoading] = useState<boolean>(false);
+  const [actionTouchTimeout, setActionTouchTimeout] = useState<ReturnType<typeof setTimeout> | null>(null);
+  const [actionSearchQuery, setActionSearchQuery] = useState<string>('');
+
   useEffect(() => {
     if (playerId) {
       fetchPlayerExplorationCards(playerId).then(setPlayerExplorationCards);
       fetchPlayerStrategyCards(playerId).then(setPlayerStrategyCards);
+      fetchPlayerActionCards(playerId).then(setPlayerActionCards);
     }
-  }, [playerId, setPlayerExplorationCards, setPlayerStrategyCards]);
+  }, [playerId, setPlayerExplorationCards, setPlayerStrategyCards, setPlayerActionCards]);
 
   // Handlers for Exploration Cards
   const handleRemoveExplorationCard = async () => {
@@ -316,7 +335,6 @@ const ActionsTab: React.FC = () => {
       
       // Update the backend
       await updateStrategyCardTradeGood(cardId, true);
-      // No need to handle Socket.IO event here as it will sync other clients
     } catch (error) {
       console.error('Error incrementing trade good:', error);
       // Optionally, rollback the optimistic update if needed
@@ -336,11 +354,115 @@ const ActionsTab: React.FC = () => {
       
       // Update the backend
       await updateStrategyCardTradeGood(cardId, false);
-      // No need to handle Socket.IO event here as it will sync other clients
     } catch (error) {
       console.error('Error decrementing trade good:', error);
       // Optionally, rollback the optimistic update if needed
     }
+  };
+
+  // Handlers for Action Cards
+  const handleRemoveActionCard = async () => {
+    if (actionContextMenu && playerId) {
+      const { cardId } = actionContextMenu;
+      const updatedCards = playerActionCards.filter(card => card.id !== cardId);
+      const updatedCardIds = updatedCards.map(card => card.id);
+      try {
+        await updatePlayerActionCards(playerId, updatedCardIds);
+        const updatedGameState = await apiFetchGameState();
+        setGameState(updatedGameState);
+        setPlayerActionCards(updatedCards);
+        setSelectedActionCardIds(updatedCardIds);
+        handleCloseActionContextMenu();
+      } catch (error) {
+        console.error('Error removing action card:', error);
+      }
+    }
+  };
+
+  const handleOpenAction = () => {
+    setActionOpen(true);
+    loadActionCards();
+  };
+
+  const handleCloseAction = () => {
+    setActionOpen(false);
+  };
+
+  const loadActionCards = async () => {
+    if (!playerId) return;
+    setActionLoading(true);
+    try {
+      const [cards, playerCards] = await Promise.all([
+        fetchAllActionCards(),
+        fetchPlayerActionCards(playerId),
+      ]);
+      setActionAllCards(cards);
+      setSelectedActionCardIds(playerCards.map(card => card.id));
+    } catch (error) {
+      console.error('Error loading action cards:', error);
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const toggleActionCard = (cardId: number) => {
+    setSelectedActionCardIds(prev =>
+      prev.includes(cardId) ? prev.filter(id => id !== cardId) : [...prev, cardId]
+    );
+  };
+
+  const handleConfirmAction = async () => {
+    if (!playerId) return;
+    setActionLoading(true);
+    try {
+      await updatePlayerActionCards(playerId, selectedActionCardIds);
+      const updatedCards = await fetchPlayerActionCards(playerId);
+      setPlayerActionCards(updatedCards);
+      const updatedGameState = await apiFetchGameState();
+      setGameState(updatedGameState);
+      handleCloseAction();
+    } catch (error) {
+      console.error('Error updating action cards:', error);
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleActionContextMenu = (event: MouseEvent, cardId: number) => {
+    event.preventDefault();
+    setActionContextMenu(
+      actionContextMenu === null
+        ? {
+            mouseX: event.clientX - 2,
+            mouseY: event.clientY - 4,
+            cardId,
+          }
+        : null
+    );
+  };
+
+  const handleActionTouchStart = (event: TouchEvent, cardId: number) => {
+    event.preventDefault();
+    const touch = event.touches[0];
+    const timeout = setTimeout(() => {
+      setActionContextMenu({
+        mouseX: touch.clientX - 2,
+        mouseY: touch.clientY - 4,
+        cardId,
+      });
+    }, LONG_PRESS_DURATION);
+    setActionTouchTimeout(timeout);
+  };
+
+  const handleActionTouchEnd = () => {
+    if (actionTouchTimeout) {
+      clearTimeout(actionTouchTimeout);
+      setActionTouchTimeout(null);
+    }
+  };
+
+  const handleCloseActionContextMenu = () => {
+    setActionContextMenu(null);
   };
 
   useEffect(() => {
@@ -356,10 +478,16 @@ const ActionsTab: React.FC = () => {
     };
     window.addEventListener('openManageStrategyCardsDialog', openStrategyDialog);
 
+    const openActionDialog = () => {
+      handleOpenAction();
+    };
+    window.addEventListener('openManageActionCardsDialog', openActionDialog);
+
     // Cleanup event listeners on unmount
     return () => {
       window.removeEventListener('openManageExplorationCardsDialog', openExplorationDialog);
       window.removeEventListener('openManageStrategyCardsDialog', openStrategyDialog);
+      window.removeEventListener('openManageActionCardsDialog', openActionDialog);
     };
   }, []);
 
@@ -386,6 +514,45 @@ const ActionsTab: React.FC = () => {
                 onContextMenu={(e) => handleStrategyContextMenu(e, card.id)}
                 onTouchStart={(e) => handleStrategyTouchStart(e, card.id)}
                 onTouchEnd={handleStrategyTouchEnd}
+                sx={{
+                  cursor: 'pointer',
+                  WebkitTouchCallout: 'none',
+                  userSelect: 'none',
+                }}
+              >
+                <img
+                  src={`/assets/${card.image}`}
+                  alt={card.name}
+                  width="100px"
+                  height="150px"
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).src = '/assets/default.jpg';
+                  }}
+                  draggable={false}
+                />
+              </Box>
+            ))}
+          </Box>
+        )}
+      </Box>
+
+      {/* Action Cards Section */}
+      <Box marginBottom={4}>
+        <Typography variant="h5" gutterBottom>
+          Action Cards
+        </Typography>
+        {/* Action Cards */}
+        {playerActionCards.length === 0 ? (
+          <Typography variant="body1">No Action Cards available.</Typography>
+        ) : (
+          <Box display="flex" flexWrap="wrap" gap={2} marginTop={2}>
+            {playerActionCards.map((card) => (
+              <Box
+                key={card.id}
+                position="relative"
+                onContextMenu={(e) => handleActionContextMenu(e, card.id)}
+                onTouchStart={(e) => handleActionTouchStart(e, card.id)}
+                onTouchEnd={handleActionTouchEnd}
                 sx={{
                   cursor: 'pointer',
                   WebkitTouchCallout: 'none',
@@ -470,6 +637,20 @@ const ActionsTab: React.FC = () => {
         }
       >
         <MenuItem onClick={handleRemoveExplorationCard}>Remove Exploration Card</MenuItem>
+      </Menu>
+
+      {/* Context Menu for Action Cards */}
+      <Menu
+        open={actionContextMenu !== null}
+        onClose={handleCloseActionContextMenu}
+        anchorReference="anchorPosition"
+        anchorPosition={
+          actionContextMenu !== null
+            ? { top: actionContextMenu.mouseY, left: actionContextMenu.mouseX }
+            : undefined
+        }
+      >
+        <MenuItem onClick={handleRemoveActionCard}>Remove Action Card</MenuItem>
       </Menu>
 
       {/* Manage Strategy Cards Modal */}
@@ -622,6 +803,75 @@ const ActionsTab: React.FC = () => {
             variant="contained"
             onClick={handleConfirmExploration}
             disabled={explorationLoading}
+          >
+            Confirm
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Manage Action Cards Modal */}
+      <Dialog open={actionOpen} onClose={handleCloseAction} maxWidth="md" fullWidth>
+        <DialogTitle>Manage Action Cards</DialogTitle>
+        <DialogContent>
+          {actionLoading ? (
+            <Box display="flex" justifyContent="center" alignItems="center" minHeight="200px">
+              <CircularProgress />
+            </Box>
+          ) : (
+            <Box display="flex" flexDirection="column" gap={2}>
+              
+              {/* Search Bar for Action Cards */}
+              <TextField
+                label="Search Action Cards"
+                variant="outlined"
+                fullWidth
+                margin="normal"
+                value={actionSearchQuery}
+                onChange={(e) => setActionSearchQuery(e.target.value)}
+              />
+              
+              {/* Action Cards List */}
+              <Box display="flex" flexWrap="wrap" gap={2}>
+                {actionAllCards
+                  .filter(card => card.name.toLowerCase().includes(actionSearchQuery.toLowerCase()))
+                  .map(card => (
+                    <Box key={card.id} position="relative" width="100px" textAlign="center">
+                      <Card
+                        selected={selectedActionCardIds.includes(card.id)}
+                        onClick={() => toggleActionCard(card.id)}
+                        sx={{ cursor: 'pointer' }}
+                      >
+                        <img
+                          src={`/assets/${card.image}`}
+                          alt={card.name}
+                          width="100px"
+                          height="150px"
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).src = '/assets/default.jpg';
+                          }}
+                          draggable={false}
+                        />
+                        <Checkbox
+                          checked={selectedActionCardIds.includes(card.id)}
+                          icon={<CheckCircleIcon color="disabled" />}
+                          checkedIcon={<CheckCircleIcon color="primary" />}
+                          sx={{ position: 'absolute', top: 8, right: 8 }}
+                        />
+                      </Card>
+                    </Box>
+                  ))}
+              </Box>
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseAction} disabled={actionLoading}>
+            Cancel
+          </Button>
+          <Button
+            variant="contained"
+            onClick={handleConfirmAction}
+            disabled={actionLoading}
           >
             Confirm
           </Button>

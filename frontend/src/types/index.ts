@@ -70,8 +70,12 @@ export interface ExplorationCard {
 export interface StrategyCard {
   id: number;
   name: string;
-  description: string;
   image: string;
-  type: string;
   tradeGoodCount: number;
+}
+
+export interface ActionCard {
+  id: number;
+  name: string;
+  image: string;
 }

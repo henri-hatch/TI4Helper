@@ -1,7 +1,7 @@
 // src/contexts/GameContext.tsx
 import React, { createContext, useState, useEffect, ReactNode } from 'react';
-import { GameState, Player, Planet, Objective, PlayerJoinResponse, PlayerPlanet, ExplorationCard, StrategyCard } from '../types';
-import { fetchGameState as apiFetchGameState, joinGame, fetchPlanets, assignPlanetsToPlayer, updatePlanetTapped as apiUpdatePlanetTapped, explorePlanet as apiExplorePlanet, fetchPlanetAttachments, fetchPlayerExplorationCards, fetchAllExplorationCards, updatePlayerExplorationCards, fetchPlayerStrategyCards } from '../services/api';
+import { GameState, Player, Planet, Objective, PlayerJoinResponse, PlayerPlanet, ExplorationCard, StrategyCard, ActionCard } from '../types';
+import { fetchGameState as apiFetchGameState, joinGame, fetchPlanets, assignPlanetsToPlayer, updatePlanetTapped as apiUpdatePlanetTapped, explorePlanet as apiExplorePlanet, fetchPlanetAttachments, fetchPlayerExplorationCards, fetchAllExplorationCards, updatePlayerExplorationCards, fetchPlayerStrategyCards, fetchPlayerActionCards, updatePlayerActionCards, fetchAllActionCards } from '../services/api';
 import socket from '../services/socket';
 import axios from 'axios';
 
@@ -32,6 +32,9 @@ interface GameContextType {
   setPlayerExplorationCards: React.Dispatch<React.SetStateAction<ExplorationCard[]>>;
   playerStrategyCards: StrategyCard[];
   setPlayerStrategyCards: React.Dispatch<React.SetStateAction<StrategyCard[]>>;
+  playerActionCards: ActionCard[];
+  setPlayerActionCards: React.Dispatch<React.SetStateAction<ActionCard[]>>;
+  updatePlayerActionCardsHandler: (cardIds: number[]) => Promise<void>;
 }
 
 export const GameContext = createContext<GameContextType>({
@@ -49,6 +52,9 @@ export const GameContext = createContext<GameContextType>({
   setPlayerExplorationCards: () => {},
   playerStrategyCards: [],
   setPlayerStrategyCards: () => {},
+  playerActionCards: [],
+  setPlayerActionCards: () => {},
+  updatePlayerActionCardsHandler: async () => {},
 });
 
 export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
@@ -58,6 +64,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [planets, setPlanets] = useState<Planet[]>([]);
   const [playerExplorationCards, setPlayerExplorationCards] = useState<ExplorationCard[]>([]);
   const [playerStrategyCards, setPlayerStrategyCards] = useState<StrategyCard[]>([]);
+  const [playerActionCards, setPlayerActionCards] = useState<ActionCard[]>([]);
 
   useEffect(() => {
     // Fetch initial game state
@@ -127,6 +134,9 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         .catch(console.error);
       fetchPlayerStrategyCards(playerId)
         .then(setPlayerStrategyCards)
+        .catch(console.error);
+      fetchPlayerActionCards(playerId)
+        .then(setPlayerActionCards)
         .catch(console.error);
       apiFetchGameState()
         .then(setGameState)
@@ -243,6 +253,19 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
+  const updatePlayerActionCardsHandler = async (cardIds: number[]) => {
+    if (!playerId) return;
+    try {
+      await updatePlayerActionCards(playerId, cardIds);
+      const updatedCards = await fetchPlayerActionCards(playerId);
+      setPlayerActionCards(updatedCards);
+      const updatedGameState = await apiFetchGameState();
+      setGameState(updatedGameState);
+    } catch (error) {
+      console.error('Error updating player action cards:', error);
+    }
+  };
+
   return (
     <GameContext.Provider
       value={{
@@ -260,6 +283,9 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         setPlayerExplorationCards,
         playerStrategyCards,
         setPlayerStrategyCards,
+        playerActionCards,
+        setPlayerActionCards,
+        updatePlayerActionCardsHandler,
       }}
     >
       {children}
