@@ -31,12 +31,8 @@ import {
 } from '../services/api';
 import { ExplorationCard, StrategyCard } from '../types';
 import { styled } from '@mui/material/styles';
-import io from 'socket.io-client';
 
 const LONG_PRESS_DURATION = 500;
-
-// Initialize Socket.IO client
-const socket = io('http://localhost:PORT'); // Replace PORT with your backend port
 
 // Styled component for generic Card
 const Card = styled(Box)<{ selected: boolean }>(({ theme, selected }) => ({
@@ -364,21 +360,6 @@ const ActionsTab: React.FC = () => {
     return () => {
       window.removeEventListener('openManageExplorationCardsDialog', openExplorationDialog);
       window.removeEventListener('openManageStrategyCardsDialog', openStrategyDialog);
-    };
-  }, []);
-
-  useEffect(() => {
-    // Listen for tradeGoodUpdated events
-    socket.on('tradeGoodUpdated', ({ cardId, tradeGoodCount }) => {
-      setStrategyAllCards(prevCards =>
-        prevCards.map(card =>
-          card.id === cardId ? { ...card, tradeGoodCount } : card
-        )
-      );
-    });
-
-    return () => {
-      socket.off('tradeGoodUpdated');
     };
   }, []);
 
