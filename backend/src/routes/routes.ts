@@ -877,32 +877,48 @@ export const setupRoutes = (app: Application) => {
   }
 
   // Register routes
+
+  // Health check
   app.get('/api/health', healthCheck);
+
+  // General game states
   app.get('/api/game-state', fetchGameState);
-  app.post('/api/victory-points/update', updateVictoryPoints);
-  app.post('/api/player/join', registerPlayer);
   app.get('/api/get-ip', getLocalIPs);
+  app.post('/api/player/join', registerPlayer);
+
+  // Victory Points & Objectives
+  app.post('/api/victory-points/update', updateVictoryPoints);
+
+  // Planets
   app.get('/api/planets', getPlanets);
+  app.get('/api/planet/:planetId/attachments', getPlanetAttachments);
   app.post('/api/player/assign-planets', assignPlanetsToPlayer);
   app.post('/api/player/update-tapped', updatePlanetTapped);
-  app.get('/api/exploration-cards', getExplorationCards);
   app.post('/api/explore-planet', explorePlanet);
-  app.get('/api/planet/:planetId/attachments', getPlanetAttachments);
-  app.get('/api/exploration-cards/attach', getAttachTypeExplorationCards);
   app.post('/api/planet/attachments', attachCardsToPlanet);
   app.post('/api/planet/detach', detachCardsFromPlanet);
   app.delete('/api/planet/delete', deletePlanet);
+
+  // Exploration
+  app.get('/api/exploration-cards', getExplorationCards);
+  app.get('/api/exploration-cards/attach', getAttachTypeExplorationCards);
   app.get('/api/player/:playerId/exploration-cards', getPlayerExplorationCards);
-  app.delete('/api/exploration-cards/:id', removeExplorationCard);
   app.get('/api/exploration-cards-by-type', fetchExplorationCardsByType);
   app.post('/api/player/update-exploration-cards', updatePlayerExplorationCards);
+  app.delete('/api/exploration-cards/:id', removeExplorationCard);
+
+  // Strategies
   app.get('/api/strategy-cards', fetchAllStrategyCards);
   app.get('/api/player/:playerId/strategy-cards', fetchPlayerStrategyCardsHandler);
   app.post('/api/player/update-strategy-cards', updatePlayerStrategyCardsHandler);
   app.post('/api/strategy-card/update-trade-good', updateStrategyCardTradeGood);
+
+  // Actions
   app.get('/api/action-cards', fetchAllActionCards);
   app.get('/api/player/:playerId/action-cards', fetchPlayerActionCardsHandler);
   app.post('/api/player/update-action-cards', updatePlayerActionCardsHandler);
+
+  // Relics
   app.get('/api/relic-cards', fetchAllRelicCards);
   app.get('/api/player/:playerId/relic-cards', fetchPlayerRelicCards);
   app.post('/api/combine-relic-fragments', combineRelicFragments);
