@@ -768,6 +768,133 @@ export const setupRoutes = (app: Application) => {
     }
   };
 
+  // Add new endpoints for relic functionality
+  const fetchAllRelicCards: RequestHandler = async (req, res) => {
+    try {
+      const db = getDatabase();
+      const cards = await db.all(`SELECT * FROM relic_cards`);
+      res.status(200).json({ cards });
+    } catch (error) {
+      console.error('Error fetching relic cards:', error);
+      res.status(500).json({ error: 'Failed to fetch relic cards' });
+    }
+  };
+
+  const fetchPlayerRelicCards: RequestHandler = async (req, res) => {
+    const { playerId } = req.params;
+    try {
+      const db = getDatabase();
+      const cards = await db.all(`
+        SELECT rc.* FROM relic_cards rc
+        INNER JOIN player_relic_cards prc ON rc.id = prc.cardId
+        WHERE prc.playerId = ?
+      `, [playerId]);
+      res.status(200).json({ cards });
+    } catch (error) {
+      console.error('Error fetching player relic cards:', error);
+      res.status(500).json({ error: 'Failed to fetch player relic cards' });
+    }
+  };
+
+  const combineRelicFragments: RequestHandler = async (req, res) => {
+    const { playerId, fragmentIds } = req.body;
+    
+    const db = getDatabase();
+    try {
+      // Verify fragments are valid for combination
+      const fragments = await db.all(
+        `SELECT * FROM exploration_cards WHERE id IN (${fragmentIds.join(',')}) AND subtype = 'relic_fragment'`
+      );
+      
+      if (fragments.length !== 3) {
+        res.status(400).json({ error: 'Must select exactly 3 fragments' });
+        return;
+      }
+      
+      // Check if fragments are compatible (same type or include frontier)
+      const types = fragments.map(f => f.type);
+      const hasFrontier = types.includes('frontier');
+      const mainType = types.find(t => t !== 'frontier');
+      const isValid = hasFrontier ? 
+        types.filter(t => t === mainType || t === 'frontier').length === 3 :
+        types.every(t => t === types[0]);
+      
+      if (!isValid) {
+        res.status(400).json({ error: 'Invalid fragment combination' });
+        return;
+      }
+
+      await db.run('BEGIN TRANSACTION');
+
+      // Remove fragments from player
+      await db.run(
+        `DELETE FROM player_exploration_cards WHERE playerId = ? AND cardId IN (${fragmentIds.join(',')})`,
+        playerId
+      );
+
+      // Draw random relic card
+      const relic = await db.get(`
+        SELECT rc.* FROM relic_cards rc
+        INNER JOIN relic_deck rd ON rc.id = rd.cardId
+        ORDER BY RANDOM() LIMIT 1
+      `);
+
+      if (!relic) {
+        await db.run('ROLLBACK');
+        res.status(404).json({ error: 'No relics remaining in deck' });
+        return;
+      }
+
+      // Remove relic from deck
+      await db.run(`DELETE FROM relic_deck WHERE cardId = ?`, relic.id);
+
+      // Add relic to player
+      await db.run(
+        `INSERT INTO player_relic_cards (playerId, cardId) VALUES (?, ?)`,
+        playerId,
+        relic.id
+      );
+
+      await db.run('COMMIT');
+      res.status(200).json({ relic });
+    } catch (error) {
+      await db.run('ROLLBACK');
+      console.error('Error combining relic fragments:', error);
+      res.status(500).json({ error: 'Failed to combine relic fragments' });
+    }
+  };
+
+  const updatePlayerRelicCards: RequestHandler = async (req, res) => {
+    const { playerId, relicCardIds } = req.body as { playerId: string; relicCardIds: number[] };
+
+    if (!playerId || !Array.isArray(relicCardIds)) {
+      res.status(400).json({ error: 'playerId and relicCardIds are required.' });
+      return;
+    }
+
+    const db = getDatabase();
+    try {
+      await db.run('BEGIN TRANSACTION');
+
+      // Delete existing relic card assignments for the player
+      await db.run('DELETE FROM player_relic_cards WHERE playerId = ?', playerId);
+
+      // Insert new relic card assignments
+      const insertStmt = await db.prepare('INSERT INTO player_relic_cards (playerId, cardId) VALUES (?, ?)');
+      for (const cardId of relicCardIds) {
+        await insertStmt.run(playerId, cardId);
+      }
+      await insertStmt.finalize();
+
+      await db.run('COMMIT');
+      res.status(200).json({ message: 'Relic cards updated successfully' });
+    } catch (error) {
+      await db.run('ROLLBACK');
+      console.error('Error updating player relic cards:', error);
+      res.status(500).json({ error: 'Failed to update relic cards' });
+    }
+  }
+
   // Register routes
   app.get('/api/health', healthCheck);
   app.get('/api/game-state', fetchGameState);
@@ -795,4 +922,8 @@ export const setupRoutes = (app: Application) => {
   app.get('/api/action-cards', fetchAllActionCards);
   app.get('/api/player/:playerId/action-cards', fetchPlayerActionCardsHandler);
   app.post('/api/player/update-action-cards', updatePlayerActionCardsHandler);
+  app.get('/api/relic-cards', fetchAllRelicCards);
+  app.get('/api/player/:playerId/relic-cards', fetchPlayerRelicCards);
+  app.post('/api/combine-relic-fragments', combineRelicFragments);
+  app.post('/api/player/update-relic-cards', updatePlayerRelicCards);
 };

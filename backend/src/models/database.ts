@@ -14,7 +14,6 @@ export const initializeDatabase = async () => {
 
   // Create tables with victoryPoints and unique playerId
   await db.exec(`
-    -- Players Table
     CREATE TABLE IF NOT EXISTS players (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       playerId TEXT UNIQUE NOT NULL,
@@ -53,9 +52,9 @@ export const initializeDatabase = async () => {
 
     CREATE TABLE IF NOT EXISTS exploration_cards (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
-      name TEXT UNIQUE NOT NULL,
-      type TEXT NOT NULL CHECK (type IN ('hazardous', 'cultural', 'industrial', 'action', 'fragment')),
-      subtype TEXT,
+      name TEXT NOT NULL,
+      type TEXT NOT NULL CHECK (type IN ('hazardous', 'cultural', 'industrial', 'frontier')),
+      subtype TEXT CHECK (subtype IN ('action', 'attach', 'relic_fragment')),
       image TEXT NOT NULL
     );
 
@@ -111,6 +110,26 @@ export const initializeDatabase = async () => {
       FOREIGN KEY (playerId) REFERENCES players(playerId) ON DELETE CASCADE,
       FOREIGN KEY (cardId) REFERENCES action_cards(id) ON DELETE CASCADE
     );
+
+    CREATE TABLE IF NOT EXISTS relic_cards (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT UNIQUE NOT NULL,
+      image TEXT NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS relic_deck (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      cardId INTEGER NOT NULL,
+      FOREIGN KEY (cardId) REFERENCES relic_cards(id)
+    );
+
+    CREATE TABLE IF NOT EXISTS player_relic_cards (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      playerId TEXT NOT NULL,
+      cardId INTEGER NOT NULL,
+      FOREIGN KEY (playerId) REFERENCES players(playerId) ON DELETE CASCADE,
+      FOREIGN KEY (cardId) REFERENCES relic_cards(id) ON DELETE CASCADE
+    );
   `);
 
   console.log('Database tables ensured.');
@@ -119,6 +138,7 @@ export const initializeDatabase = async () => {
   await initializeExplorationCards();
   await initializeStrategyCards();
   await initializeActionCards();
+  await initializeRelicCards();
 
   console.log('All database tables initialized.');
 };
@@ -168,27 +188,20 @@ const initializeExplorationCards = async () => {
     const data = await fs.readFile(cardsPath, 'utf-8');
     const cards: ExplorationCardInput[] = JSON.parse(data);
 
-    // Clear existing deck
+    // Clear existing cards and deck
     await db.run(`DELETE FROM exploration_deck`);
+    await db.run(`DELETE FROM exploration_cards`);
 
+    // Insert each card as a new entry, regardless of name
     for (const card of cards) {
-      let cardId: number;
-      const existing = await db.get(`SELECT id FROM exploration_cards WHERE name = ?`, card.name);
-
-      if (!existing) {
-        const insertResult = await db.run(
-          `INSERT INTO exploration_cards (name, type, subtype, image) VALUES (?, ?, ?, ?)`,
-          card.name,
-          card.type,
-          card.subtype || null,
-          card.image
-        );
-        cardId = insertResult.lastID as number;
-        console.log(`Inserted exploration card: ${card.name}`);
-      } else {
-        cardId = existing.id; // Use the existing card's ID
-        console.log(`Exploration card already exists: ${card.name}`);
-      }
+      const insertResult = await db.run(
+        `INSERT INTO exploration_cards (name, type, subtype, image) VALUES (?, ?, ?, ?)`,
+        card.name,
+        card.type,
+        card.subtype,
+        card.image
+      );
+      const cardId = insertResult.lastID as number;
 
       // Add card to the exploration deck
       await db.run(
@@ -196,6 +209,8 @@ const initializeExplorationCards = async () => {
         cardId,
         card.type
       );
+      
+      console.log(`Inserted exploration card: ${card.name}`);
     }
 
     console.log('Exploration deck initialized.');
@@ -207,8 +222,8 @@ const initializeExplorationCards = async () => {
 // Define ExplorationCardInput interface
 interface ExplorationCardInput {
   name: string;
-  type: string; // 'hazardous', 'cultural', 'industrial', 'action', 'fragment'
-  subtype?: string; // Optional additional categorization
+  type: string; // 'hazardous', 'cultural', 'industrial', 'frontier'
+  subtype: string; // 'action', 'attach', 'relic_fragment'
   image: string; // Relative path to image
 }
 
@@ -261,6 +276,7 @@ const initializeActionCards = async () => {
       if (!existing) {
         const insertResult = await db.run(
           `INSERT INTO action_cards (name, image) VALUES (?, ?)`,
+
           card.name,
           card.image
         );
@@ -278,6 +294,43 @@ const initializeActionCards = async () => {
 
 // Define ActionCardInput interface
 interface ActionCardInput {
+  name: string;
+  image: string;
+}
+
+const initializeRelicCards = async () => {
+  try {
+    const db = await getDatabase();
+    const cardsPath = path.join(__dirname, 'assets', 'relic_cards.json');
+    const data = await fs.readFile(cardsPath, 'utf-8');
+    const cards: RelicCardInput[] = JSON.parse(data);
+
+    // Clear existing relics
+    await db.run(`DELETE FROM relic_cards`);
+    await db.run(`DELETE FROM relic_deck`);
+
+    for (const card of cards) {
+      const existing = await db.get(`SELECT id FROM relic_cards WHERE name = ?`, card.name);
+      if (!existing) {
+        const insertResult = await db.run(
+          `INSERT INTO relic_cards (name, image) VALUES (?, ?)`,
+          card.name,
+          card.image
+        );
+        // Add to relic deck
+        await db.run(
+          `INSERT INTO relic_deck (cardId) VALUES (?)`,
+          insertResult.lastID
+        );
+      }
+    }
+    console.log('Relic cards initialized.');
+  } catch (error) {
+    console.error('Error initializing relic cards:', error);
+  }
+};
+
+interface RelicCardInput {
   name: string;
   image: string;
 }

@@ -63,7 +63,7 @@ export interface ExplorationCard {
   id: number;
   name: string;
   type: 'hazardous' | 'cultural' | 'industrial';
-  subtype?: 'attach' | 'action' | 'fragment';
+  subtype?: 'attach' | 'action' | 'relic_fragment';
   image: string;
 }
 
@@ -75,6 +75,12 @@ export interface StrategyCard {
 }
 
 export interface ActionCard {
+  id: number;
+  name: string;
+  image: string;
+}
+
+export interface RelicCard {
   id: number;
   name: string;
   image: string;

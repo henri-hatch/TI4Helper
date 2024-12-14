@@ -1,0 +1,14 @@
+[
+    {
+        "name": "Dominus Orb",
+        "image": "relic_cards/dominus_orb.jpg"
+    },
+    {
+        "name": "Maw of Worlds",
+        "image": "relic_cards/maw_of_worlds.jpg"
+    },
+    {
+        "name": "The Codex",
+        "image": "relic_cards/the_codex.jpg"
+    }
+]

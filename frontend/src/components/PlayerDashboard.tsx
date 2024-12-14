@@ -54,19 +54,20 @@ const PlayerDashboard: React.FC = () => {
 
   // New handlers for Actions tab
   const handleManageStrategyCards = () => {
-    const event = new Event('openManageStrategyCardsDialog');
+    const event = new CustomEvent('openManageStrategyCardsDialog');
     window.dispatchEvent(event);
     handleMenuClose();
   };
 
   const handleManageExplorationCards = () => {
-    const event = new Event('openManageExplorationCardsDialog');
+    const event = new CustomEvent('openManageExplorationCardsDialog');
     window.dispatchEvent(event);
     handleMenuClose();
   };
 
   const handleManageRelics = () => {
-    // Placeholder for future functionality
+    const event = new CustomEvent('openManageRelicsDialog');
+    window.dispatchEvent(event);
     handleMenuClose();
   };
 

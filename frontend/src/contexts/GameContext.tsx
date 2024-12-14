@@ -1,7 +1,7 @@
 // src/contexts/GameContext.tsx
 import React, { createContext, useState, useEffect, ReactNode } from 'react';
-import { GameState, Player, Planet, Objective, PlayerJoinResponse, PlayerPlanet, ExplorationCard, StrategyCard, ActionCard } from '../types';
-import { fetchGameState as apiFetchGameState, joinGame, fetchPlanets, assignPlanetsToPlayer, updatePlanetTapped as apiUpdatePlanetTapped, explorePlanet as apiExplorePlanet, fetchPlanetAttachments, fetchPlayerExplorationCards, fetchAllExplorationCards, updatePlayerExplorationCards, fetchPlayerStrategyCards, fetchPlayerActionCards, updatePlayerActionCards, fetchAllActionCards } from '../services/api';
+import { GameState, Player, Planet, Objective, PlayerJoinResponse, PlayerPlanet, ExplorationCard, StrategyCard, ActionCard, RelicCard } from '../types';
+import { fetchGameState as apiFetchGameState, joinGame, fetchPlanets, assignPlanetsToPlayer, updatePlanetTapped as apiUpdatePlanetTapped, explorePlanet as apiExplorePlanet, fetchPlanetAttachments, fetchPlayerExplorationCards, fetchAllExplorationCards, updatePlayerExplorationCards, fetchPlayerStrategyCards, fetchPlayerActionCards, updatePlayerActionCards, fetchAllActionCards, fetchPlayerRelicCards, updatePlayerRelicCards, combineRelicFragments as apiCombineRelicFragments } from '../services/api';
 import socket from '../services/socket';
 import axios from 'axios';
 
@@ -35,6 +35,10 @@ interface GameContextType {
   playerActionCards: ActionCard[];
   setPlayerActionCards: React.Dispatch<React.SetStateAction<ActionCard[]>>;
   updatePlayerActionCardsHandler: (cardIds: number[]) => Promise<void>;
+  playerRelicCards: RelicCard[];
+  setPlayerRelicCards: React.Dispatch<React.SetStateAction<RelicCard[]>>;
+  combineRelicFragments: (fragmentIds: number[]) => Promise<void>;
+  updatePlayerRelicCardsHandler: (cardIds: number[]) => Promise<void>;
 }
 
 export const GameContext = createContext<GameContextType>({
@@ -55,6 +59,10 @@ export const GameContext = createContext<GameContextType>({
   playerActionCards: [],
   setPlayerActionCards: () => {},
   updatePlayerActionCardsHandler: async () => {},
+  playerRelicCards: [],
+  setPlayerRelicCards: () => {},
+  combineRelicFragments: async () => {},
+  updatePlayerRelicCardsHandler: async () => {},
 });
 
 export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
@@ -65,6 +73,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [playerExplorationCards, setPlayerExplorationCards] = useState<ExplorationCard[]>([]);
   const [playerStrategyCards, setPlayerStrategyCards] = useState<StrategyCard[]>([]);
   const [playerActionCards, setPlayerActionCards] = useState<ActionCard[]>([]);
+  const [playerRelicCards, setPlayerRelicCards] = useState<RelicCard[]>([]);
 
   useEffect(() => {
     // Fetch initial game state
@@ -137,6 +146,9 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         .catch(console.error);
       fetchPlayerActionCards(playerId)
         .then(setPlayerActionCards)
+        .catch(console.error);
+      fetchPlayerRelicCards(playerId)
+        .then(setPlayerRelicCards)
         .catch(console.error);
       apiFetchGameState()
         .then(setGameState)
@@ -266,6 +278,36 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
+  const updatePlayerRelicCardsHandler = async (cardIds: number[]) => {
+    if (!playerId) return;
+    try {
+      await updatePlayerRelicCards(playerId, cardIds);
+      const updatedCards = await fetchPlayerRelicCards(playerId);
+      setPlayerRelicCards(updatedCards);
+      const updatedGameState = await apiFetchGameState();
+      setGameState(updatedGameState);
+    } catch (error) {
+      console.error('Error updating player relic cards:', error);
+    }
+  };
+
+  const combineRelicFragments = async (fragmentIds: number[]) => {
+    if (!playerId) return;
+    try {
+      await apiCombineRelicFragments(playerId, fragmentIds);
+      const [updatedRelics, updatedExplorationCards] = await Promise.all([
+        fetchPlayerRelicCards(playerId),
+        fetchPlayerExplorationCards(playerId)
+      ]);
+      setPlayerRelicCards(updatedRelics);
+      setPlayerExplorationCards(updatedExplorationCards);
+      const updatedGameState = await apiFetchGameState();
+      setGameState(updatedGameState);
+    } catch (error) {
+      console.error('Error combining relic fragments:', error);
+    }
+  };
+
   return (
     <GameContext.Provider
       value={{
@@ -286,6 +328,10 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         playerActionCards,
         setPlayerActionCards,
         updatePlayerActionCardsHandler,
+        playerRelicCards,
+        setPlayerRelicCards,
+        combineRelicFragments,
+        updatePlayerRelicCardsHandler,
       }}
     >
       {children}

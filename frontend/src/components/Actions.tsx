@@ -31,8 +31,11 @@ import {
   fetchAllActionCards,
   fetchPlayerActionCards,
   updatePlayerActionCards,
+  fetchAllRelicCards,
+  fetchPlayerRelicCards,
+  updatePlayerRelicCards,
 } from '../services/api';
-import { ExplorationCard, StrategyCard, ActionCard } from '../types';
+import { ExplorationCard, StrategyCard, ActionCard, RelicCard } from '../types';
 import { styled } from '@mui/material/styles';
 
 const LONG_PRESS_DURATION = 500;
@@ -61,6 +64,9 @@ const ActionsTab: React.FC = () => {
     playerActionCards,
     setPlayerActionCards,
     setGameState,
+    playerRelicCards,
+    setPlayerRelicCards,
+    combineRelicFragments,
   } = useContext(GameContext);
 
   // State for Exploration Cards
@@ -101,13 +107,29 @@ const ActionsTab: React.FC = () => {
   const [actionTouchTimeout, setActionTouchTimeout] = useState<ReturnType<typeof setTimeout> | null>(null);
   const [actionSearchQuery, setActionSearchQuery] = useState<string>('');
 
+  // State for relics
+  const [relicContextMenu, setRelicContextMenu] = useState<{
+    mouseX: number;
+    mouseY: number;
+    cardId: number;
+  } | null>(null);
+  const [relicOpen, setRelicOpen] = useState<boolean>(false);
+  const [relicAllCards, setRelicAllCards] = useState<RelicCard[]>([]);
+  const [selectedRelicCardIds, setSelectedRelicCardIds] = useState<number[]>([]);
+  const [relicLoading, setRelicLoading] = useState<boolean>(false);
+  const [relicTouchTimeout, setRelicTouchTimeout] = useState<ReturnType<typeof setTimeout> | null>(null);
+  const [relicSearchQuery, setRelicSearchQuery] = useState<string>('');
+  const [combineRelicOpen, setCombineRelicOpen] = useState<boolean>(false);
+  const [selectedFragmentIds, setSelectedFragmentIds] = useState<number[]>([]);
+
   useEffect(() => {
     if (playerId) {
       fetchPlayerExplorationCards(playerId).then(setPlayerExplorationCards);
       fetchPlayerStrategyCards(playerId).then(setPlayerStrategyCards);
       fetchPlayerActionCards(playerId).then(setPlayerActionCards);
+      fetchPlayerRelicCards(playerId).then(setPlayerRelicCards); // Add this line
     }
-  }, [playerId, setPlayerExplorationCards, setPlayerStrategyCards, setPlayerActionCards]);
+  }, [playerId, setPlayerExplorationCards, setPlayerStrategyCards, setPlayerActionCards, setPlayerRelicCards]);
 
   // Handlers for Exploration Cards
   const handleRemoveExplorationCard = async () => {
@@ -465,6 +487,137 @@ const ActionsTab: React.FC = () => {
     setActionContextMenu(null);
   };
 
+  // Handlers for Relic Cards
+  const handleRemoveRelicCard = async () => {
+    if (relicContextMenu && playerId) {
+      const { cardId } = relicContextMenu;
+      const updatedCards = playerRelicCards.filter(card => card.id !== cardId);
+      const updatedCardIds = updatedCards.map(card => card.id);
+      try {
+        await updatePlayerRelicCards(playerId, updatedCardIds); // Changed from updatePlayerActionCards
+        const updatedGameState = await apiFetchGameState();
+        setGameState(updatedGameState);
+        setPlayerRelicCards(updatedCards);
+        handleCloseRelicContextMenu();
+      } catch (error) {
+        console.error('Error removing relic card:', error);
+      }
+    }
+  };
+
+  const handleOpenRelic = () => {
+    setRelicOpen(true);
+    loadRelicCards();
+  };
+
+  const handleCloseRelic = () => {
+    setRelicOpen(false);
+  };
+
+  const loadRelicCards = async () => {
+    if (!playerId) return;
+    setRelicLoading(true);
+    try {
+      const [cards, playerCards] = await Promise.all([
+        fetchAllRelicCards(),
+        fetchPlayerRelicCards(playerId),
+      ]);
+      setRelicAllCards(cards);
+      setSelectedRelicCardIds(playerCards.map(card => card.id));
+    } catch (error) {
+      console.error('Error loading relic cards:', error);
+    } finally {
+      setRelicLoading(false);
+    }
+  };
+
+  const toggleRelicCard = (cardId: number) => {
+    setSelectedRelicCardIds(prev =>
+      prev.includes(cardId) ? prev.filter(id => id !== cardId) : [...prev, cardId]
+    );
+  }
+
+  const handleConfirmRelic = async () => {
+    if (!playerId) return;
+    setRelicLoading(true);
+    try {
+      await updatePlayerRelicCards(playerId, selectedRelicCardIds); // Changed from updatePlayerActionCards
+      const updatedCards = await fetchPlayerRelicCards(playerId);
+      setPlayerRelicCards(updatedCards);
+      const updatedGameState = await apiFetchGameState();
+      setGameState(updatedGameState);
+      handleCloseRelic();
+    } catch (error) {
+      console.error('Error updating relic cards:', error);
+    } finally {
+      setRelicLoading(false);
+    }
+  }
+
+  const handleCombineRelic = () => {
+    setCombineRelicOpen(true);
+  };
+
+  const toggleFragmentSelection = (cardId: number) => {
+    setSelectedFragmentIds(prev => {
+      if (prev.includes(cardId)) {
+        return prev.filter(id => id !== cardId);
+      }
+      if (prev.length < 3) {
+        return [...prev, cardId];
+      }
+      return prev;
+    });
+  };
+
+  const handleConfirmCombineRelic = async () => {
+    if (selectedFragmentIds.length !== 3) return;
+    try {
+      await combineRelicFragments(selectedFragmentIds);
+      setCombineRelicOpen(false);
+      setSelectedFragmentIds([]);
+    } catch (error) {
+      console.error('Error combining relic fragments:', error);
+    }
+  };
+
+  const handleRelicContextMenu = (event: MouseEvent, cardId: number) => {
+    event.preventDefault();
+    setRelicContextMenu(
+      relicContextMenu === null
+        ? {
+            mouseX: event.clientX - 2,
+            mouseY: event.clientY - 4,
+            cardId,
+          }
+        : null
+    );
+  };
+
+  const handleRelicTouchStart = (event: TouchEvent, cardId: number) => {
+    event.preventDefault();
+    const touch = event.touches[0];
+    const timeout = setTimeout(() => {
+      setRelicContextMenu({
+        mouseX: touch.clientX - 2,
+        mouseY: touch.clientY - 4,
+        cardId,
+      });
+    }, LONG_PRESS_DURATION);
+    setRelicTouchTimeout(timeout);
+  };
+
+  const handleRelicTouchEnd = () => {
+    if (relicTouchTimeout) {
+      clearTimeout(relicTouchTimeout);
+      setRelicTouchTimeout(null);
+  }
+};
+
+const handleCloseRelicContextMenu = () => {
+  setRelicContextMenu(null);
+};
+
   useEffect(() => {
     // Event listener for opening Exploration Cards Dialog
     const openExplorationDialog = () => {
@@ -483,11 +636,18 @@ const ActionsTab: React.FC = () => {
     };
     window.addEventListener('openManageActionCardsDialog', openActionDialog);
 
+    // Add event listener for opening Relic Cards Dialog
+    const openRelicDialog = () => {
+      handleOpenRelic();
+    };
+    window.addEventListener('openManageRelicsDialog', openRelicDialog);
+
     // Cleanup event listeners on unmount
     return () => {
       window.removeEventListener('openManageExplorationCardsDialog', openExplorationDialog);
       window.removeEventListener('openManageStrategyCardsDialog', openStrategyDialog);
       window.removeEventListener('openManageActionCardsDialog', openActionDialog);
+      window.removeEventListener('openManageRelicsDialog', openRelicDialog);
     };
   }, []);
 
@@ -611,6 +771,40 @@ const ActionsTab: React.FC = () => {
         </Box>
       </Box>
 
+      {/* Relics Section */}
+      <Box marginY={4}>
+        <Typography variant="h5" gutterBottom>
+          Relics
+        </Typography>
+        <Box display="flex" flexWrap="wrap" gap={2} marginTop={2}>
+          {playerRelicCards.map((card) => (
+            <Box
+              key={card.id}
+              position="relative"
+              onContextMenu={(e) => handleRelicContextMenu(e, card.id)}
+              onTouchStart={(e) => handleRelicTouchStart(e, card.id)}
+              onTouchEnd={handleRelicTouchEnd}
+              sx={{
+                cursor: 'pointer',
+                WebkitTouchCallout: 'none',
+                userSelect: 'none',
+              }}
+            >
+              <img
+                src={`/assets/${card.image}`}
+                alt={card.name}
+                width="100px"
+                height="150px"
+                onError={(e) => {
+                  (e.target as HTMLImageElement).src = '/assets/default.jpg';
+                }}
+                draggable={false}
+              />
+            </Box>
+          ))}
+        </Box>
+      </Box>
+
       {/* Context Menu for Strategy Cards */}
       <Menu
         open={strategyContextMenu !== null}
@@ -637,6 +831,9 @@ const ActionsTab: React.FC = () => {
         }
       >
         <MenuItem onClick={handleRemoveExplorationCard}>Remove Exploration Card</MenuItem>
+        {playerExplorationCards.find(card => card.id === explorationContextMenu?.cardId)?.subtype === 'relic_fragment' && (
+          <MenuItem onClick={handleCombineRelic}>Combine Relic</MenuItem>
+        )}
       </Menu>
 
       {/* Context Menu for Action Cards */}
@@ -651,6 +848,20 @@ const ActionsTab: React.FC = () => {
         }
       >
         <MenuItem onClick={handleRemoveActionCard}>Remove Action Card</MenuItem>
+      </Menu>
+
+      {/* Context Menu for Relic Cards */}
+      <Menu
+        open={relicContextMenu !== null}
+        onClose={handleCloseRelicContextMenu}
+        anchorReference="anchorPosition"
+        anchorPosition={
+          relicContextMenu !== null
+            ? { top: relicContextMenu.mouseY, left: relicContextMenu.mouseX }
+            : undefined
+        }
+      >
+        <MenuItem onClick={handleRemoveRelicCard}>Remove Relic Card</MenuItem>
       </Menu>
 
       {/* Manage Strategy Cards Modal */}
@@ -874,6 +1085,120 @@ const ActionsTab: React.FC = () => {
             disabled={actionLoading}
           >
             Confirm
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Manage Relic Modal */}
+      <Dialog open={relicOpen} onClose={handleCloseRelic} maxWidth="md" fullWidth>
+        <DialogTitle>Manage Relics</DialogTitle>
+        <DialogContent>
+          {relicLoading ? (
+            <Box display="flex" justifyContent="center" alignItems="center" minHeight="200px">
+              <CircularProgress />
+            </Box>
+          ) : (
+            <Box display="flex" flexDirection="column" gap={2}>
+              {/* Search Bar for Relic Cards */}
+              <TextField
+                label="Search Relic Cards"
+                variant="outlined"
+                fullWidth
+                margin="normal"
+                value={relicSearchQuery}
+                onChange={(e) => setRelicSearchQuery(e.target.value)}
+              />
+              
+              {/* Relic Cards List */}
+              <Box display="flex" flexWrap="wrap" gap={2}>
+                {relicAllCards
+                  .filter(card => card.name.toLowerCase().includes(relicSearchQuery.toLowerCase()))
+                  .map(card => (
+                    <Box key={card.id} position="relative" width="100px" textAlign="center">
+                      <Card
+                        selected={selectedRelicCardIds.includes(card.id)}
+                        onClick={() => toggleRelicCard(card.id)}
+                        sx={{ cursor: 'pointer' }}
+                      >
+                        <img
+                          src={`/assets/${card.image}`}
+                          alt={card.name}
+                          width="100px"
+                          height="150px"
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).src = '/assets/default.jpg';
+                          }}
+                          draggable={false}
+                        />
+                        <Checkbox
+                          checked={selectedRelicCardIds.includes(card.id)}
+                          icon={<CheckCircleIcon color="disabled" />}
+                          checkedIcon={<CheckCircleIcon color="primary" />}
+                          sx={{ position: 'absolute', top: 8, right: 8 }}
+                        />
+                      </Card>
+                    </Box>
+                  ))}
+              </Box>
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseRelic} disabled={relicLoading}>
+            Cancel
+          </Button>
+          <Button
+            variant="contained"
+            onClick={handleConfirmRelic}
+            disabled={relicLoading}
+          >
+            Confirm
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Combine Relic Modal */}
+      <Dialog open={combineRelicOpen} onClose={() => setCombineRelicOpen(false)} maxWidth="md" fullWidth>
+        <DialogTitle>Combine Relic Fragments</DialogTitle>
+        <DialogContent>
+          <Box display="flex" flexWrap="wrap" gap={2}>
+            {playerExplorationCards
+              .filter(card => card.subtype === 'relic_fragment')
+              .map(card => (
+                <Card
+                  key={card.id}
+                  selected={selectedFragmentIds.includes(card.id)}
+                  onClick={() => toggleFragmentSelection(card.id)}
+                  sx={{ cursor: 'pointer' }}
+                >
+                  <img
+                    src={`/assets/${card.image}`}
+                    alt={card.name}
+                    width="100px"
+                    height="150px"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).src = '/assets/default.jpg';
+                    }}
+                    draggable={false}
+                  />
+                  <Checkbox
+                    checked={selectedFragmentIds.includes(card.id)}
+                    icon={<CheckCircleIcon color="disabled" />}
+                    checkedIcon={<CheckCircleIcon color="primary" />}
+                    sx={{ position: 'absolute', top: 8, right: 8 }}
+                  />
+                </Card>
+              ))}
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setCombineRelicOpen(false)}>Cancel</Button>
+          <Button
+            variant="contained"
+            onClick={handleConfirmCombineRelic}
+            disabled={selectedFragmentIds.length !== 3}
+          >
+            Combine
           </Button>
         </DialogActions>
       </Dialog>

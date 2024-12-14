@@ -34,5 +34,53 @@
     "type": "cultural",
     "subtype": "action",
     "image": "exploration_cards/mercenary_outfit.1.jpg"
+  },
+  {
+    "name": "Cultural Relic Fragment 1",
+    "type": "cultural",
+    "subtype": "relic_fragment",
+    "image": "exploration_cards/cultural_relic_fragment.1.jpg"
+  },
+  {
+    "name": "Hazardous Relic Fragment 1",
+    "type": "hazardous",
+    "subtype": "relic_fragment",
+    "image": "exploration_cards/hazardous_relic_fragment.1.jpg"
+  },
+  {
+    "name": "Industrial Relic Fragment 1",
+    "type": "industrial",
+    "subtype": "relic_fragment",
+    "image": "exploration_cards/industrial_relic_fragment.1.jpg"
+  },
+  {
+    "name": "Frontier Relic Fragment",
+    "type": "frontier",
+    "subtype": "relic_fragment",
+    "image": "exploration_cards/frontier_relic_fragment.1.jpg"
+  },
+  {
+    "name": "Cultural Relic Fragment 2",
+    "type": "cultural",
+    "subtype": "relic_fragment",
+    "image": "exploration_cards/cultural_relic_fragment.2.jpg"
+  },
+  {
+    "name": "Hazardous Relic Fragment 2",
+    "type": "hazardous",
+    "subtype": "relic_fragment",
+    "image": "exploration_cards/hazardous_relic_fragment.2.jpg"
+  },
+  {
+    "name": "Industrial Relic Fragment 2",
+    "type": "industrial",
+    "subtype": "relic_fragment",
+    "image": "exploration_cards/industrial_relic_fragment.2.jpg"
+  },
+  {
+    "name": "Frontier Relic Fragment",
+    "type": "frontier",
+    "subtype": "relic_fragment",
+    "image": "exploration_cards/frontier_relic_fragment.2.jpg"
   }
 ]
