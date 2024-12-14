@@ -5,25 +5,6 @@ import { Server } from 'socket.io';
 import { v4 as uuidv4 } from 'uuid';
 import os from 'os';
 import express from 'express';
-const router = express.Router();
-
-// Define Planet interface to match the database
-interface Planet {
-  id: number;
-  name: string;
-  resources: number;
-  influence: number;
-  legendaryAbility: string;
-}
-
-// Add new interfaces
-interface ExplorationCard {
-  id: number;
-  name: string;
-  type: string;
-  subtype?: string;
-  image: string;
-}
 
 export const setupRoutes = (app: Application) => {
   // Health check route
