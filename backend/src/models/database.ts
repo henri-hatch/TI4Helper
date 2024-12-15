@@ -130,17 +130,39 @@ export const initializeDatabase = async () => {
       FOREIGN KEY (playerId) REFERENCES players(playerId) ON DELETE CASCADE,
       FOREIGN KEY (cardId) REFERENCES relic_cards(id) ON DELETE CASCADE
     );
+
+    CREATE TABLE IF NOT EXISTS technology_cards (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT UNIQUE NOT NULL,
+      type TEXT CHECK (type IN ('action', 'passive', 'vehicle')) NOT NULL,
+      faction TEXT NOT NULL,
+      image TEXT NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS player_technology_cards (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      playerId TEXT NOT NULL,
+      cardId INTEGER NOT NULL,
+      tapped BOOLEAN DEFAULT FALSE,
+      FOREIGN KEY (playerId) REFERENCES players(playerId) ON DELETE CASCADE,
+      FOREIGN KEY (cardId) REFERENCES technology_cards(id) ON DELETE CASCADE
+    );
   `);
 
-  console.log('Database tables ensured.');
-
-  await initializePlanets();
-  await initializeExplorationCards();
-  await initializeStrategyCards();
-  await initializeActionCards();
-  await initializeRelicCards();
-
-  console.log('All database tables initialized.');
+  // Check if tables are empty before initializing
+  const hasExistingData = await db.get('SELECT COUNT(*) as count FROM players');
+  if (hasExistingData.count === 0) {
+    // Only initialize data if database is empty
+    await initializePlanets();
+    await initializeExplorationCards();
+    await initializeStrategyCards();
+    await initializeActionCards();
+    await initializeRelicCards();
+    await initializeTechnologyCards();
+  } else {
+    console.log('Existing game found. Database already initialized.');
+    console.log('Getting previous game...');
+  }
 };
 
 // Update the planet insertion to include 'type'
@@ -332,6 +354,41 @@ const initializeRelicCards = async () => {
 
 interface RelicCardInput {
   name: string;
+  image: string;
+}
+
+// Add initialization function
+const initializeTechnologyCards = async () => {
+  try {
+    const db = getDatabase();
+    const cardsPath = path.join(__dirname, 'assets', 'technology_cards.json');
+    const data = await fs.readFile(cardsPath, 'utf-8');
+    const cards: TechnologyCardInput[] = JSON.parse(data);
+
+    await db.run(`DELETE FROM technology_cards`);
+
+    for (const card of cards) {
+      await db.run(
+        `INSERT INTO technology_cards (name, type, faction, image) 
+         VALUES (?, ?, ?, ?)`,
+        card.name,
+        card.type,
+        card.faction,
+        card.image
+      );
+    }
+
+    console.log("Technology cards initialized.");
+  } catch (error) {
+    console.error('Error initializing technology cards:', error);
+  }
+};
+
+
+interface TechnologyCardInput {
+  name: string;
+  type: string; // 'action', 'passive', 'vehicle'
+  faction: string; // 'propulsion', 'warfare', 'biotics', 'cybernetics' + any faction name
   image: string;
 }
 

@@ -54,7 +54,7 @@ const Card = styled(Box)<{ selected: boolean }>(({ theme, selected }) => ({
   },
 }));
 
-const ActionsTab: React.FC = () => {
+const CardInventoryTab: React.FC = () => {
   const {
     playerId,
     playerExplorationCards,
@@ -653,12 +653,10 @@ const handleCloseRelicContextMenu = () => {
 
   return (
     <Box padding={2}>
-      <Typography variant="h4" gutterBottom>
-        Actions
-      </Typography>
-
+      <Typography variant="h4" gutterBottom>Card Inventory</Typography>
+      
       {/* Strategy Cards Section */}
-      <Box marginBottom={4}>
+      <Box marginY={4}>
         <Typography variant="h5" gutterBottom>
           Strategy Cards
         </Typography>
@@ -678,6 +676,12 @@ const handleCloseRelicContextMenu = () => {
                   cursor: 'pointer',
                   WebkitTouchCallout: 'none',
                   userSelect: 'none',
+                  border: '2px solid transparent',
+                  borderRadius: '8px',
+                  padding: '10px',
+                  '&:hover': {
+                    border: '2px solid #1976d2',
+                  },
                 }}
               >
                 <img
@@ -696,8 +700,10 @@ const handleCloseRelicContextMenu = () => {
         )}
       </Box>
 
+      <Divider />
+
       {/* Action Cards Section */}
-      <Box marginBottom={4}>
+      <Box marginY={4}>
         <Typography variant="h5" gutterBottom>
           Action Cards
         </Typography>
@@ -717,6 +723,12 @@ const handleCloseRelicContextMenu = () => {
                   cursor: 'pointer',
                   WebkitTouchCallout: 'none',
                   userSelect: 'none',
+                  border: '2px solid transparent',
+                  borderRadius: '8px',
+                  padding: '10px',
+                  '&:hover': {
+                    border: '2px solid #1976d2',
+                  },
                 }}
               >
                 <img
@@ -754,6 +766,12 @@ const handleCloseRelicContextMenu = () => {
                 cursor: 'pointer',
                 WebkitTouchCallout: 'none',
                 userSelect: 'none',
+                border: '2px solid transparent',
+                borderRadius: '8px',
+                padding: '10px',
+                '&:hover': {
+                  border: '2px solid #1976d2',
+                },
               }}
             >
               <img
@@ -770,6 +788,8 @@ const handleCloseRelicContextMenu = () => {
           ))}
         </Box>
       </Box>
+
+      <Divider />
 
       {/* Relics Section */}
       <Box marginY={4}>
@@ -788,6 +808,12 @@ const handleCloseRelicContextMenu = () => {
                 cursor: 'pointer',
                 WebkitTouchCallout: 'none',
                 userSelect: 'none',
+                border: '2px solid transparent',
+                borderRadius: '8px',
+                padding: '10px',
+                '&:hover': {
+                  border: '2px solid #1976d2',
+                },
               }}
             >
               <img
@@ -960,7 +986,7 @@ const handleCloseRelicContextMenu = () => {
               <CircularProgress />
             </Box>
           ) : (
-            <Box display="flex" flexDirection="column" gap={2}>
+            <Box display="flex" flexDirection="column" gap={3}>
               
               {/* Search Bar for Exploration Cards */}
               <TextField
@@ -973,7 +999,7 @@ const handleCloseRelicContextMenu = () => {
               />
               
               {/* Exploration Cards List */}
-              <Box display="flex" flexWrap="wrap" gap={2}>
+              <Box display="flex" flexWrap="wrap" gap={3}>
                 {explorationAllCards
                   .filter(card => card.name.toLowerCase().includes(explorationSearchQuery.toLowerCase()))
                   .map(card => (
@@ -1029,7 +1055,7 @@ const handleCloseRelicContextMenu = () => {
               <CircularProgress />
             </Box>
           ) : (
-            <Box display="flex" flexDirection="column" gap={2}>
+            <Box display="flex" flexDirection="column" gap={3}>
               
               {/* Search Bar for Action Cards */}
               <TextField
@@ -1042,7 +1068,7 @@ const handleCloseRelicContextMenu = () => {
               />
               
               {/* Action Cards List */}
-              <Box display="flex" flexWrap="wrap" gap={2}>
+              <Box display="flex" flexWrap="wrap" gap={3}>
                 {actionAllCards
                   .filter(card => card.name.toLowerCase().includes(actionSearchQuery.toLowerCase()))
                   .map(card => (
@@ -1098,7 +1124,7 @@ const handleCloseRelicContextMenu = () => {
               <CircularProgress />
             </Box>
           ) : (
-            <Box display="flex" flexDirection="column" gap={2}>
+            <Box display="flex" flexDirection="column" gap={3}>
               {/* Search Bar for Relic Cards */}
               <TextField
                 label="Search Relic Cards"
@@ -1110,7 +1136,7 @@ const handleCloseRelicContextMenu = () => {
               />
               
               {/* Relic Cards List */}
-              <Box display="flex" flexWrap="wrap" gap={2}>
+              <Box display="flex" flexWrap="wrap" gap={3}>
                 {relicAllCards
                   .filter(card => card.name.toLowerCase().includes(relicSearchQuery.toLowerCase()))
                   .map(card => (
@@ -1161,7 +1187,7 @@ const handleCloseRelicContextMenu = () => {
       <Dialog open={combineRelicOpen} onClose={() => setCombineRelicOpen(false)} maxWidth="md" fullWidth>
         <DialogTitle>Combine Relic Fragments</DialogTitle>
         <DialogContent>
-          <Box display="flex" flexWrap="wrap" gap={2}>
+          <Box display="flex" flexWrap="wrap" gap={3}>
             {playerExplorationCards
               .filter(card => card.subtype === 'relic_fragment')
               .map(card => (
@@ -1206,4 +1232,4 @@ const handleCloseRelicContextMenu = () => {
   );
 };
 
-export default ActionsTab;
+export default CardInventoryTab;

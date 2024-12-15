@@ -5,7 +5,7 @@ import { Box, Typography } from '@mui/material';
 const Objectives: React.FC = () => {
   return (
     <Box padding={2}>
-      <Typography variant="h5">Objectives</Typography>
+      <Typography variant="h4" gutterBottom>Objectives</Typography>
       {/* Add Objectives content here */}
     </Box>
   );

@@ -85,3 +85,12 @@ export interface RelicCard {
   name: string;
   image: string;
 }
+
+export interface TechnologyCard {
+  id: number;
+  name: string;
+  type: 'action' | 'passive' | 'vehicle';
+  faction: string;
+  image: string;
+  tapped?: boolean;
+}

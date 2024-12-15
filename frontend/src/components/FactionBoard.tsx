@@ -10,6 +10,7 @@ interface FactionBoardProps {
 const FactionBoard: React.FC<FactionBoardProps> = ({ playerName, currentPlayer }) => {
   return (
     <Box padding={2}>
+      <Typography variant="h4" gutterBottom>Faction Board</Typography>
       {currentPlayer && (
         <Box mt={2}>
           <Typography variant="h6">Your Stats</Typography>

@@ -1,0 +1,104 @@
+[
+    {
+        "name": "Dark Energy Tap",
+        "type": "passive",
+        "faction": "propulsion",
+        "image": "technology_cards/generic/dark_energy_tap.face.jpg"
+    },
+    {
+        "name": "Sling Relay",
+        "type": "action",
+        "faction": "propulsion",
+        "image": "technology_cards/generic/sling_relay.face.jpg"
+    },
+    {
+        "name": "Plasma Scoring",
+        "type": "passive",
+        "faction": "warfare",
+        "image": "technology_cards/generic/plasma_scoring.face.jpg"
+    },
+    {
+        "name": "Self Assembly Routines",
+        "type": "passive",
+        "faction": "warfare",
+        "image": "technology_cards/generic/self_assembly_routines.face.jpg"
+    },
+    {
+        "name": "Psychoarchaeology",
+        "type": "passive",
+        "faction": "biotic",
+        "image": "technology_cards/generic/psychoarchaeology.face.jpg"
+    },
+    {
+        "name": "Biostims",
+        "type": "action",
+        "faction": "biotic",
+        "image": "technology_cards/generic/biostims.face.jpg"
+    },
+    {
+        "name": "Sarween Tools",
+        "type": "passive",
+        "faction": "cybernetic",
+        "image": "technology_cards/generic/sarween_tools.face.jpg"
+    },
+    {
+        "name": "Graviton Laser System",
+        "type": "action",
+        "faction": "cybernetic",
+        "image": "technology_cards/generic/graviton_laser_system.face.jpg"
+    },
+    {
+        "name": "Carrier II",
+        "type": "vehicle",
+        "faction": "none",
+        "image": "technology_cards/generic/vehicle_upgrades/carrier_ii.jpg"
+    },
+    {
+        "name": "Cruiser II",
+        "type": "vehicle",
+        "faction": "none",
+        "image": "technology_cards/generic/vehicle_upgrades/cruiser_ii.jpg"
+    },
+    {
+        "name": "Destroyer II",
+        "type": "vehicle",
+        "faction": "none",
+        "image": "technology_cards/generic/vehicle_upgrades/destroyer_ii.jpg"
+    },
+    {
+        "name": "Dreadnought II",
+        "type": "vehicle",
+        "faction": "none",
+        "image": "technology_cards/generic/vehicle_upgrades/dreadnought_ii.jpg"
+    },
+    {
+        "name": "Fighter II",
+        "type": "vehicle",
+        "faction": "none",
+        "image": "technology_cards/generic/vehicle_upgrades/fighter_ii.jpg"
+    },
+    {
+        "name": "Infantry II",
+        "type": "vehicle",
+        "faction": "none",
+        "image": "technology_cards/generic/vehicle_upgrades/infantry_ii.jpg"
+    },
+    {
+        "name": "PDS II",
+        "type": "vehicle",
+        "faction": "none",
+        "image": "technology_cards/generic/vehicle_upgrades/pds_ii.jpg"
+    },
+    {
+        "name": "Space Dock II",
+        "type": "vehicle",
+        "faction": "none",
+        "image": "technology_cards/generic/vehicle_upgrades/space_dock_ii.jpg"
+    },
+    {
+        "name": "War Sun",
+        "type": "vehicle",
+        "faction": "none",
+        "image": "technology_cards/generic/vehicle_upgrades/war_sun.jpg"
+    }
+]

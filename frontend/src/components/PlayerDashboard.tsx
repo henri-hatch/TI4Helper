@@ -18,7 +18,7 @@ import FactionBoard from './FactionBoard';
 import PlanetsTab from './Planets';
 import Objectives from './Objectives';
 import Technology from './Technology';
-import Actions from './Actions';
+import CardInventory from './CardInventory';
 import { useTheme } from '@mui/material/styles';
 
 const PlayerDashboard: React.FC = () => {
@@ -42,7 +42,8 @@ const PlayerDashboard: React.FC = () => {
   // Existing handlers
   const handleChangeFaction = () => {
     console.log('Change Faction clicked');
-    // Implement change faction logic here
+    const event = new CustomEvent('openChangeFactionDialog');
+    window.dispatchEvent(event);
     handleMenuClose();
   };
 
@@ -52,7 +53,13 @@ const PlayerDashboard: React.FC = () => {
     handleMenuClose();
   };
 
-  // New handlers for Actions tab
+  const handleManageTechnology = () => {
+    const event = new CustomEvent('openManageTechnologyDialog');
+    window.dispatchEvent(event);
+    handleMenuClose
+  };
+
+  // New handlers for Card Inventory tab
   const handleManageStrategyCards = () => {
     const event = new CustomEvent('openManageStrategyCardsDialog');
     window.dispatchEvent(event);
@@ -65,14 +72,14 @@ const PlayerDashboard: React.FC = () => {
     handleMenuClose();
   };
 
-  const handleManageRelics = () => {
-    const event = new CustomEvent('openManageRelicsDialog');
+  const handleManageActionCards = () => {
+    const event = new Event('openManageActionCardsDialog');
     window.dispatchEvent(event);
     handleMenuClose();
   };
 
-  const handleManageActionCards = () => {
-    const event = new Event('openManageActionCardsDialog');
+  const handleManageRelics = () => {
+    const event = new CustomEvent('openManageRelicsDialog');
     window.dispatchEvent(event);
     handleMenuClose();
   };
@@ -124,11 +131,11 @@ const PlayerDashboard: React.FC = () => {
           <Tab label="Planets" />
           <Tab label="Objectives" />
           <Tab label="Technology" />
-          <Tab label="Actions" />
+          <Tab label="Card Inventory" />
         </Tabs>
       </AppBar>
 
-      {/* Menu for Actions - Add here for each menu item for each */}
+      {/* Menu for Card Inventory - Add here for each menu item for each */}
       <Menu
         anchorEl={anchorEl}
         open={Boolean(anchorEl)}
@@ -139,6 +146,9 @@ const PlayerDashboard: React.FC = () => {
         )}
         {currentTab === 1 && (
           <MenuItem onClick={handleSelectPlanets}>Manage Planets</MenuItem>
+        )}
+        {currentTab === 3 && (
+          <MenuItem onClick={handleManageTechnology}>Manage Technology</MenuItem>
         )}
         {currentTab === 4 && (
           <>
@@ -158,7 +168,7 @@ const PlayerDashboard: React.FC = () => {
         {currentTab === 1 && <PlanetsTab />}
         {currentTab === 2 && <Objectives />}
         {currentTab === 3 && <Technology />}
-        {currentTab === 4 && <Actions />}
+        {currentTab === 4 && <CardInventory />}
       </Box>
     </div>
   );

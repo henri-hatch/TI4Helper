@@ -876,6 +876,78 @@ export const setupRoutes = (app: Application) => {
     }
   }
 
+  const fetchAllTechnologyCards: RequestHandler = async (req, res) => {
+    try {
+      const db = getDatabase();
+      const cards = await db.all(`SELECT * FROM technology_cards WHERE type != 'vehicle'`);
+      res.status(200).json({ cards });
+    } catch (error) {
+      console.error('Error fetching technology cards:', error);
+      res.status(500).json({ error: 'Failed to fetch technology cards' });
+    }
+  };
+  
+  const fetchPlayerTechnologyCards: RequestHandler = async (req, res) => {
+    const { playerId } = req.params;
+    try {
+      const db = getDatabase();
+      const cards = await db.all(`
+        SELECT tc.*, ptc.tapped 
+        FROM technology_cards tc
+        INNER JOIN player_technology_cards ptc ON tc.id = ptc.cardId
+        WHERE ptc.playerId = ?`, 
+        [playerId]
+      );
+      res.status(200).json({ cards });
+    } catch (error) {
+      console.error('Error fetching player technology cards:', error);
+      res.status(500).json({ error: 'Failed to fetch player technology cards' });
+    }
+  };
+  
+  const updatePlayerTechnologyCards: RequestHandler = async (req, res) => {
+    const { playerId, cardIds } = req.body;
+    
+    const db = getDatabase();
+    try {
+      await db.run('BEGIN TRANSACTION');
+      await db.run('DELETE FROM player_technology_cards WHERE playerId = ?', playerId);
+      
+      const stmt = await db.prepare(
+        'INSERT INTO player_technology_cards (playerId, cardId) VALUES (?, ?)'
+      );
+      for (const cardId of cardIds) {
+        await stmt.run(playerId, cardId);
+      }
+      await stmt.finalize();
+      
+      await db.run('COMMIT');
+      res.status(200).json({ message: 'Technology cards updated' });
+    } catch (error) {
+      await db.run('ROLLBACK');
+      console.error('Error updating technology cards:', error);
+      res.status(500).json({ error: 'Failed to update technology cards' });
+    }
+  };
+  
+  const updateTechnologyCardTapped: RequestHandler = async (req, res) => {
+    const { playerId, cardId, tapped } = req.body;
+    
+    try {
+      const db = getDatabase();
+      await db.run(
+        `UPDATE player_technology_cards 
+         SET tapped = ? 
+         WHERE playerId = ? AND cardId = ?`,
+        tapped, playerId, cardId
+      );
+      res.status(200).json({ message: 'Technology card tapped status updated' });
+    } catch (error) {
+      console.error('Error updating technology card tapped status:', error);
+      res.status(500).json({ error: 'Failed to update technology card tapped status' });
+    }
+  };
+
   // Register routes
 
   // Health check
@@ -923,4 +995,10 @@ export const setupRoutes = (app: Application) => {
   app.get('/api/player/:playerId/relic-cards', fetchPlayerRelicCards);
   app.post('/api/combine-relic-fragments', combineRelicFragments);
   app.post('/api/player/update-relic-cards', updatePlayerRelicCards);
+
+  // Technology
+  app.get('/api/technology-cards', fetchAllTechnologyCards);
+  app.get('/api/player/:playerId/technology-cards', fetchPlayerTechnologyCards);
+  app.post('/api/player/update-technology-cards', updatePlayerTechnologyCards);
+  app.post('/api/technology-card/update-tapped', updateTechnologyCardTapped);
 };

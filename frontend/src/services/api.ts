@@ -1,6 +1,6 @@
 // src/services/api.ts
 import axios from 'axios';
-import { GameState, PlayerJoinResponse, Planet, ExplorationCard, StrategyCard, ActionCard, RelicCard } from '../types';
+import { GameState, PlayerJoinResponse, Planet, ExplorationCard, StrategyCard, ActionCard, RelicCard, TechnologyCard } from '../types';
 
 // Dynamically set the backend URL based on the current window location
 const BACKEND_PORT = '5000'; // Ensure this matches your backend's port
@@ -175,4 +175,26 @@ export const combineRelicFragments = async (playerId: string, fragmentIds: numbe
 
 export const updatePlayerRelicCards = async (playerId: string, relicCardIds: number[]): Promise<void> => {
   await api.post('/player/update-relic-cards', { playerId, relicCardIds });
+};
+
+export const fetchAllTechnologyCards = async (): Promise<TechnologyCard[]> => {
+  const response = await api.get('/technology-cards');
+  return response.data.cards;
+};
+
+export const fetchPlayerTechnologyCards = async (playerId: string): Promise<TechnologyCard[]> => {
+  const response = await api.get(`/player/${playerId}/technology-cards`);
+  return response.data.cards;
+};
+
+export const updatePlayerTechnologyCards = async (playerId: string, cardIds: number[]): Promise<void> => {
+  await api.post('/player/update-technology-cards', { playerId, cardIds });
+};
+
+export const updateTechnologyCardTapped = async (
+  playerId: string,
+  cardId: number,
+  tapped: boolean
+): Promise<void> => {
+  await api.post('/technology-card/update-tapped', { playerId, cardId, tapped });
 };

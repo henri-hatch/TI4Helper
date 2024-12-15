@@ -29,7 +29,7 @@ import { styled } from '@mui/material/styles';
 const LONG_PRESS_DURATION = 500; // Duration in milliseconds
 
 // Styled component for generic Card
-const Card = styled(Box)<{ selected: boolean }>(({ theme, selected }) => ({
+const Card = styled(Box)<{ selected: boolean; tapped?: boolean }>(({ theme, selected, tapped }) => ({
   position: 'relative',
   border: selected ? '2px solid #1976d2' : '2px solid transparent',
   borderRadius: '8px',
@@ -37,6 +37,9 @@ const Card = styled(Box)<{ selected: boolean }>(({ theme, selected }) => ({
   width: '100px',
   height: '150px',
   cursor: 'pointer',
+  transform: tapped ? 'rotate(90deg)' : 'none',
+  transformOrigin: 'center center',
+  transition: 'transform 0.3s ease',
   '&:hover': {
     border: '2px solid #1976d2',
   },
@@ -270,6 +273,7 @@ const PlanetsTab: React.FC = () => {
 
   return (
     <Box padding={2}>
+      <Typography variant="h4" gutterBottom>Planets</Typography>
       {/* Planets Dialog */}
       <Dialog
         open={isPlanetsDialogOpen}
@@ -375,14 +379,14 @@ const PlanetsTab: React.FC = () => {
       </Menu>
 
       {/* Selected Planets Dashboard */}
-      <Box padding="20px">
+      <Box>
         <Typography variant="h5" gutterBottom>
           Your Planets
         </Typography>
         {selectedPlanets && selectedPlanets.length === 0 ? (
           <Typography variant="body1">No planets selected.</Typography>
         ) : (
-          <Box display="flex" flexWrap="wrap" gap={2}>
+          <Box display="flex" flexWrap="wrap" gap={4} marginTop={2}>
             {selectedPlanets?.map((planet) => (
               <Box
                 key={planet.id}
@@ -395,9 +399,12 @@ const PlanetsTab: React.FC = () => {
                   cursor: 'pointer',
                   WebkitTouchCallout: 'none',
                   userSelect: 'none',
-                  opacity: planet.tapped ? 0.6 : 1,
                   width: '100px',
                   height: '150px',
+                  transform: planet.tapped ? 'rotate(90deg)' : 'none',
+                  transformOrigin: 'center center',
+                  transition: 'transform 0.3s ease',
+                  margin: '25px', // Add margin to prevent overlap when rotated
                 }}
               >
                 <img
@@ -406,8 +413,7 @@ const PlanetsTab: React.FC = () => {
                   width={100}
                   height={150}
                   style={{
-                    filter: 'none',
-                    transition: 'filter 0.3s',
+                    transition: 'transform 0.3s',
                   }}
                   onError={(e) => {
                     (e.target as HTMLImageElement).src = '/assets/default.jpg';
@@ -435,16 +441,6 @@ const PlanetsTab: React.FC = () => {
                     draggable={false}
                   />
                 ))}
-                {/* Tapped Indicator */}
-                {planet.tapped && (
-                  <Typography
-                    variant="caption"
-                    color="error"
-                    sx={{ position: 'absolute', bottom: 4, left: '50%', transform: 'translateX(-50%)' }}
-                  >
-                    Tapped
-                  </Typography>
-                )}
               </Box>
             ))}
           </Box>
