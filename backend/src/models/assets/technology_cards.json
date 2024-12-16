@@ -3,102 +3,138 @@
         "name": "Dark Energy Tap",
         "type": "passive",
         "faction": "propulsion",
-        "image": "technology_cards/generic/dark_energy_tap.face.jpg"
+        "image": "technology_cards/dark_energy_tap.face.jpg"
     },
     {
         "name": "Sling Relay",
         "type": "action",
         "faction": "propulsion",
-        "image": "technology_cards/generic/sling_relay.face.jpg"
+        "image": "technology_cards/sling_relay.face.jpg"
     },
     {
         "name": "Plasma Scoring",
         "type": "passive",
         "faction": "warfare",
-        "image": "technology_cards/generic/plasma_scoring.face.jpg"
+        "image": "technology_cards/plasma_scoring.face.jpg"
     },
     {
         "name": "Self Assembly Routines",
         "type": "passive",
         "faction": "warfare",
-        "image": "technology_cards/generic/self_assembly_routines.face.jpg"
+        "image": "technology_cards/self_assembly_routines.face.jpg"
     },
     {
         "name": "Psychoarchaeology",
         "type": "passive",
         "faction": "biotic",
-        "image": "technology_cards/generic/psychoarchaeology.face.jpg"
+        "image": "technology_cards/psychoarchaeology.face.jpg"
     },
     {
         "name": "Biostims",
         "type": "action",
         "faction": "biotic",
-        "image": "technology_cards/generic/biostims.face.jpg"
+        "image": "technology_cards/biostims.face.jpg"
     },
     {
         "name": "Sarween Tools",
         "type": "passive",
         "faction": "cybernetic",
-        "image": "technology_cards/generic/sarween_tools.face.jpg"
+        "image": "technology_cards/sarween_tools.face.jpg"
     },
     {
         "name": "Graviton Laser System",
         "type": "action",
         "faction": "cybernetic",
-        "image": "technology_cards/generic/graviton_laser_system.face.jpg"
+        "image": "technology_cards/graviton_laser_system.face.jpg"
     },
     {
         "name": "Carrier II",
         "type": "vehicle",
         "faction": "none",
-        "image": "technology_cards/generic/vehicle_upgrades/carrier_ii.jpg"
+        "image": "technology_cards/vehicle_upgrades/carrier_ii.jpg"
     },
     {
         "name": "Cruiser II",
         "type": "vehicle",
         "faction": "none",
-        "image": "technology_cards/generic/vehicle_upgrades/cruiser_ii.jpg"
+        "image": "technology_cards/vehicle_upgrades/cruiser_ii.jpg"
     },
     {
         "name": "Destroyer II",
         "type": "vehicle",
         "faction": "none",
-        "image": "technology_cards/generic/vehicle_upgrades/destroyer_ii.jpg"
+        "image": "technology_cards/vehicle_upgrades/destroyer_ii.jpg"
     },
     {
         "name": "Dreadnought II",
         "type": "vehicle",
         "faction": "none",
-        "image": "technology_cards/generic/vehicle_upgrades/dreadnought_ii.jpg"
+        "image": "technology_cards/vehicle_upgrades/dreadnought_ii.jpg"
     },
     {
         "name": "Fighter II",
         "type": "vehicle",
         "faction": "none",
-        "image": "technology_cards/generic/vehicle_upgrades/fighter_ii.jpg"
+        "image": "technology_cards/vehicle_upgrades/fighter_ii.jpg"
     },
     {
         "name": "Infantry II",
         "type": "vehicle",
         "faction": "none",
-        "image": "technology_cards/generic/vehicle_upgrades/infantry_ii.jpg"
+        "image": "technology_cards/vehicle_upgrades/infantry_ii.jpg"
     },
     {
         "name": "PDS II",
         "type": "vehicle",
         "faction": "none",
-        "image": "technology_cards/generic/vehicle_upgrades/pds_ii.jpg"
+        "image": "technology_cards/vehicle_upgrades/pds_ii.jpg"
     },
     {
         "name": "Space Dock II",
         "type": "vehicle",
         "faction": "none",
-        "image": "technology_cards/generic/vehicle_upgrades/space_dock_ii.jpg"
+        "image": "technology_cards/vehicle_upgrades/space_dock_ii.jpg"
     },
     {
         "name": "War Sun",
         "type": "vehicle",
         "faction": "none",
-        "image": "technology_cards/generic/vehicle_upgrades/war_sun.jpg"
+        "image": "technology_cards/vehicle_upgrades/war_sun.jpg"
+    },
+    {
+        "name": "Genetic Recombobulation",
+        "type": "action",
+        "faction": "mahact_gene_sorcerers",
+        "image": "factions/mahact_gene_sorcerers/genetic_recombobulation.jpg"
+    },
+    {
+        "name": "Crimson Legionnaire II",
+        "type": "vehicle",
+        "faction": "mahact_gene_sorcerers",
+        "image": "factions/mahact_gene_sorcerers/crimson_legionnaire_ii.jpg"
+    },
+    {
+        "name": "Valefar Assimilator X",
+        "type": "passive",
+        "faction": "nekro_virus",
+        "image": "factions/nekro_virus/valefar_assimilator_x.jpg"
+    },
+    {
+        "name": "Valefar Assimilator Y",
+        "type": "passive",
+        "faction": "nekro_virus",
+        "image": "factions/nekro_virus/valefar_assimilator_y.jpg"
+    },
+    {
+        "name": "Eres Siphons",
+        "type": "passive",
+        "faction": "universities_of_jolnar",
+        "image": "factions/universities_of_jolnar/eres_siphons.jpg"
+    },
+    {
+        "name": "Spacial Conduit Cylinder",
+        "type": "action",
+        "faction": "universities_of_jolnar",
+        "image": "factions/universities_of_jolnar/spacial_conduit_cylinder.jpg"
     }
 ]

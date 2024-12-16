@@ -1,0 +1,23 @@
+[
+    {
+        "name": "mahact_gene_sorcerers",
+        "faction_board_front_image": "factions/mahact_gene_sorcerers/faction_board.front.jpg",
+        "faction_board_back_image": "factions/mahact_gene_sorcerers/faction_board.back.jpg",
+        "faction_reference_image": "factions/mahact_gene_sorcerers/faction_reference.jpg",
+        "faction_token_image": "factions/mahact_gene_sorcerers/faction_token.jpg"
+    },
+    {
+        "name": "nekro_virus",
+        "faction_board_front_image": "factions/nekro_virus/faction_board.front.jpg",
+        "faction_board_back_image": "factions/nekro_virus/faction_board.back.jpg",
+        "faction_reference_image": "factions/nekro_virus/faction_reference.jpg",
+        "faction_token_image": "factions/nekro_virus/faction_token.jpg"
+    },
+    {
+        "name": "universities_of_jolnar",
+        "faction_board_front_image": "factions/universities_of_jolnar/faction_board.front.jpg",
+        "faction_board_back_image": "factions/universities_of_jolnar/faction_board.back.jpg",
+        "faction_reference_image": "factions/universities_of_jolnar/faction_reference.jpg",
+        "faction_token_image": "factions/universities_of_jolnar/faction_token.jpg"
+    }
+]
