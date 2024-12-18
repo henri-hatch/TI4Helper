@@ -162,9 +162,7 @@ const PlayerDashboard: React.FC = () => {
 
       {/* Render Tab Content */}
       <Box sx={{ padding: 2 }}>
-        {currentTab === 0 && (
-          <FactionBoard playerName={playerName} currentPlayer={currentPlayer} />
-        )}
+        {currentTab === 0 && <FactionBoard />}
         {currentTab === 1 && <PlanetsTab />}
         {currentTab === 2 && <Objectives />}
         {currentTab === 3 && <Technology />}

@@ -2,25 +2,10 @@
 import React from 'react';
 import { Typography, Box } from '@mui/material';
 
-interface FactionBoardProps {
-  playerName: string | null;
-  currentPlayer: any; // Replace with appropriate type
-}
-
-const FactionBoard: React.FC<FactionBoardProps> = ({ playerName, currentPlayer }) => {
+const FactionBoard: React.FC = () => {
   return (
-    <Box padding={2}>
-      <Typography variant="h4" gutterBottom>Faction Board</Typography>
-      {currentPlayer && (
-        <Box mt={2}>
-          <Typography variant="h6">Your Stats</Typography>
-          <p>Resources: {currentPlayer.resources}</p>
-          <p>Influence: {currentPlayer.influence}</p>
-          <p>Commodities: {currentPlayer.commodities}</p>
-          <p>Trade Goods: {currentPlayer.tradeGoods}</p>
-          <p>Victory Points: {currentPlayer.victoryPoints}</p>
-        </Box>
-      )}
+    <Box>
+      <Typography variant="h3">Faction Board</Typography>
     </Box>
   );
 };
