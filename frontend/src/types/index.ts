@@ -94,3 +94,11 @@ export interface TechnologyCard {
   image: string;
   tapped?: boolean;
 }
+
+export interface Faction {
+  name: string;
+  factionBoardFrontImage: string;
+  factionBoardBackImage: string;
+  factionReferenceImage: string;
+  factionTokenImage: string;
+}

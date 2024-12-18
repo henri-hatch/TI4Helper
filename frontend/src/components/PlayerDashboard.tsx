@@ -44,6 +44,7 @@ const PlayerDashboard: React.FC = () => {
     console.log('Change Faction clicked');
     const event = new CustomEvent('openChangeFactionDialog');
     window.dispatchEvent(event);
+    console.log('Event dispatched');
     handleMenuClose();
   };
 

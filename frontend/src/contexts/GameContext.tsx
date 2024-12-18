@@ -1,7 +1,7 @@
 // src/contexts/GameContext.tsx
 import React, { createContext, useState, useEffect, ReactNode } from 'react';
-import { GameState, Player, Planet, Objective, PlayerJoinResponse, PlayerPlanet, ExplorationCard, StrategyCard, ActionCard, RelicCard, TechnologyCard } from '../types';
-import { fetchGameState as apiFetchGameState, joinGame, fetchPlanets, assignPlanetsToPlayer, updatePlanetTapped as apiUpdatePlanetTapped, explorePlanet as apiExplorePlanet, fetchPlanetAttachments, fetchPlayerExplorationCards, fetchAllExplorationCards, updatePlayerExplorationCards, fetchPlayerStrategyCards, fetchPlayerActionCards, updatePlayerActionCards, fetchAllActionCards, fetchPlayerRelicCards, updatePlayerRelicCards, combineRelicFragments as apiCombineRelicFragments, updatePlayerTechnologyCards, fetchPlayerTechnologyCards } from '../services/api';
+import { GameState, Player, Planet, Objective, PlayerJoinResponse, PlayerPlanet, ExplorationCard, StrategyCard, ActionCard, RelicCard, TechnologyCard, Faction } from '../types';
+import { fetchGameState as apiFetchGameState, joinGame, fetchPlanets, assignPlanetsToPlayer, updatePlanetTapped as apiUpdatePlanetTapped, explorePlanet as apiExplorePlanet, fetchPlanetAttachments, fetchPlayerExplorationCards, fetchAllExplorationCards, updatePlayerExplorationCards, fetchPlayerStrategyCards, fetchPlayerActionCards, updatePlayerActionCards, fetchAllActionCards, fetchPlayerRelicCards, updatePlayerRelicCards, combineRelicFragments as apiCombineRelicFragments, updatePlayerTechnologyCards, fetchPlayerTechnologyCards, updatePlayerFaction, fetchFaction, fetchAllFactions } from '../services/api';
 import socket from '../services/socket';
 import axios from 'axios';
 
@@ -42,6 +42,9 @@ interface GameContextType {
   playerTechnologyCards: TechnologyCard[];
   setPlayerTechnologyCards: React.Dispatch<React.SetStateAction<TechnologyCard[]>>;
   updatePlayerTechnologyCardsHandler: (cardIds: number[]) => Promise<void>;
+  currentFaction: Faction | null;
+  allFactions: Faction[];
+  updatePlayerFactionHandler: (factionName: string) => Promise<void>;
 }
 
 export const GameContext = createContext<GameContextType>({
@@ -69,6 +72,9 @@ export const GameContext = createContext<GameContextType>({
   playerTechnologyCards: [],
   setPlayerTechnologyCards: () => {},
   updatePlayerTechnologyCardsHandler: async () => {},
+  currentFaction: null,
+  allFactions: [],
+  updatePlayerFactionHandler: async () => {},
 });
 
 export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
@@ -81,6 +87,8 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [playerActionCards, setPlayerActionCards] = useState<ActionCard[]>([]);
   const [playerRelicCards, setPlayerRelicCards] = useState<RelicCard[]>([]);
   const [playerTechnologyCards, setPlayerTechnologyCards] = useState<TechnologyCard[]>([]);
+  const [currentFaction, setCurrentFaction] = useState<Faction | null>(null);
+  const [allFactions, setAllFactions] = useState<Faction[]>([]);
 
   useEffect(() => {
     // Fetch initial game state
@@ -105,6 +113,19 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       }
     };
 
+    // Fetch factions
+    const loadFactions = async () => {
+      try {
+        console.log('Fetching factions...'); // Add this debug log
+        const factions = await fetchAllFactions();
+        console.log('Factions received:', factions); // Add this debug log
+        setAllFactions(factions);
+      } catch (error) {
+        console.error('Error fetching factions:', error);
+      }
+    };
+
+    loadFactions();
     fetchData();
     fetchAllPlanets();
 
@@ -331,6 +352,19 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
+  const updatePlayerFactionHandler = async (factionName: string) => {
+    if (!playerId) return;
+    try {
+      await updatePlayerFaction(playerId, factionName);
+      const faction = await fetchFaction(factionName);
+      setCurrentFaction(faction);
+      const updatedGameState = await apiFetchGameState();
+      setGameState(updatedGameState);
+    } catch (error) {
+      console.error('Error updating player faction:', error);
+    }
+  };
+
   return (
     <GameContext.Provider
       value={{
@@ -358,6 +392,9 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         playerTechnologyCards,
         setPlayerTechnologyCards,
         updatePlayerTechnologyCardsHandler,
+        currentFaction,
+        allFactions,
+        updatePlayerFactionHandler,
       }}
     >
       {children}

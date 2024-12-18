@@ -22,7 +22,8 @@ export const initializeDatabase = async () => {
       influence INTEGER DEFAULT 0,
       commodities INTEGER DEFAULT 0,
       trade_goods INTEGER DEFAULT 0,
-      victoryPoints INTEGER DEFAULT 0
+      victoryPoints INTEGER DEFAULT 0,
+      faction TEXT
     );
 
     CREATE TABLE IF NOT EXISTS objectives (
@@ -147,6 +148,15 @@ export const initializeDatabase = async () => {
       FOREIGN KEY (playerId) REFERENCES players(playerId) ON DELETE CASCADE,
       FOREIGN KEY (cardId) REFERENCES technology_cards(id) ON DELETE CASCADE
     );
+
+    CREATE TABLE IF NOT EXISTS factions (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT UNIQUE NOT NULL,
+      faction_board_front_image TEXT NOT NULL,
+      faction_board_back_image TEXT NOT NULL,
+      faction_reference_image TEXT NOT NULL,
+      faction_token_image TEXT NOT NULL
+    );
   `);
 
   // Check if tables are empty before initializing
@@ -159,6 +169,7 @@ export const initializeDatabase = async () => {
     await initializeActionCards();
     await initializeRelicCards();
     await initializeTechnologyCards();
+    await initializeFactions();
   } else {
     console.log('Existing game found. Database already initialized.');
     console.log('Getting previous game...');
@@ -390,6 +401,47 @@ interface TechnologyCardInput {
   type: string; // 'action', 'passive', 'vehicle'
   faction: string; // 'propulsion', 'warfare', 'biotics', 'cybernetics' + any faction name
   image: string;
+}
+
+// Initialize factions
+const initializeFactions = async () => {
+  try {
+    const db = getDatabase();
+    const factionsPath = path.join(__dirname, 'assets', 'factions.json');
+    const data = await fs.readFile(factionsPath, 'utf-8');
+    const factions: FactionInput[] = JSON.parse(data);
+
+    for (const faction of factions) {
+      const existing = await db.get(`SELECT id FROM factions WHERE name = ?`, faction.name);
+      if (!existing) {
+        await db.run(
+          `INSERT INTO factions (name, faction_board_front_image, faction_board_back_image, faction_reference_image, faction_token_image) 
+           VALUES (?, ?, ?, ?, ?)`,
+          faction.name,
+          faction.faction_board_front_image,
+          faction.faction_board_back_image,
+          faction.faction_reference_image,
+          faction.faction_token_image
+        );
+        console.log(`Inserted faction: ${faction.name}`);
+      } else {
+        console.log(`Faction already exists: ${faction.name}`);
+      }
+    }
+
+    console.log('Factions initialized.');
+  } catch (error) {
+    console.error('Error initializing factions:', error);
+  }
+}
+
+// Define FactionInput interface
+interface FactionInput {
+  name: string;
+  faction_board_front_image: string;
+  faction_board_back_image: string;
+  faction_reference_image: string;
+  faction_token_image: string;
 }
 
 export const getDatabase = (): Database<sqlite3.Database, sqlite3.Statement> => {

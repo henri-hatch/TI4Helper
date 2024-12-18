@@ -948,6 +948,47 @@ export const setupRoutes = (app: Application) => {
     }
   };
 
+  const updatePlayerFaction: RequestHandler = async (req, res) => {
+    const { playerId, faction } = req.body;
+    
+    try {
+      const db = getDatabase();
+      await db.run(
+        `UPDATE players 
+         SET faction = ? 
+         WHERE playerId = ?`,
+        faction, playerId
+      );
+      res.status(200).json({ message: 'Player faction updated' });
+    } catch (error) {
+      console.error('Error updating player faction:', error);
+      res.status(500).json({ error: 'Failed to update player faction' });
+    }
+  }
+
+  const fetchFaction: RequestHandler = async (req, res) => {
+    const { factionName } = req.params;
+    try {
+      const db = getDatabase();
+      const faction = await db.get(`SELECT * FROM factions WHERE name = ?`, factionName);
+      res.status(200).json({ faction });
+    } catch (error) {
+      console.error('Error fetching faction:', error);
+      res.status(500).json({ error: 'Failed to fetch faction' });
+    }
+  }
+
+  const getAllFactions: RequestHandler = async (req, res) => {
+    try {
+      const db = getDatabase();
+      const factions = await db.all('SELECT * FROM factions');
+      res.status(200).json({ factions });
+    } catch (error) {
+      console.error('Error fetching factions:', error);
+      res.status(500).json({ error: 'Failed to fetch factions' });
+    }
+  };
+
   // Register routes
 
   // Health check
@@ -1001,4 +1042,9 @@ export const setupRoutes = (app: Application) => {
   app.get('/api/player/:playerId/technology-cards', fetchPlayerTechnologyCards);
   app.post('/api/player/update-technology-cards', updatePlayerTechnologyCards);
   app.post('/api/technology-card/update-tapped', updateTechnologyCardTapped);
+
+  // Factions
+  app.post('/api/player/update-faction', updatePlayerFaction);
+  app.get('/api/faction/:factionName', fetchFaction);
+  app.get('/api/factions', getAllFactions);
 };
