@@ -14,23 +14,35 @@ import {
 } from '@mui/material';
 import { styled } from '@mui/material/styles';
 
-// Styled component for faction board
-const Board = styled(Box)<{ flipped: boolean }>(({ flipped }) => ({
+// Add styled components for flip animation
+const FlipCard = styled(Box)(({ theme }) => ({
+  perspective: '1000px',
+  width: '683px',
+  height: '460px',
+}));
+
+const FlipCardInner = styled(Box)<{ flipped: boolean }>(({ theme, flipped }) => ({
   position: 'relative',
   width: '100%',
-  maxWidth: '800px',
-  margin: '0 auto',
-  cursor: 'pointer',
+  height: '100%',
+  textAlign: 'center',
   transition: 'transform 0.6s',
   transformStyle: 'preserve-3d',
   transform: flipped ? 'rotateY(180deg)' : 'none',
 }));
 
-const BoardFace = styled(Box)<{ back?: boolean }>(({ back }) => ({
-  position: 'relative',
+const FlipCardFace = styled(Box)<{ front?: boolean }>(({ theme, front }) => ({
+  position: 'absolute',
   width: '100%',
+  height: '100%',
   backfaceVisibility: 'hidden',
-  transform: back ? 'rotateY(180deg)' : 'none',
+  borderRadius: '8px',
+  boxShadow: theme.shadows[5],
+  ...(front
+    ? {}
+    : {
+        transform: 'rotateY(180deg)',
+      }),
 }));
 
 const FactionBoard: React.FC = () => {
@@ -45,7 +57,7 @@ const FactionBoard: React.FC = () => {
   const [isFactionDialogOpen, setIsFactionDialogOpen] = useState<boolean>(false);
   const [loading, setLoading] = useState(false);
 
-  const handleBoardClick = () => {
+  const handleFlip = () => {
     setIsFlipped(!isFlipped);
   };
 
@@ -65,6 +77,7 @@ const FactionBoard: React.FC = () => {
   useEffect(() => {
     const handleOpenFactionDialog = () => {
       setIsFactionDialogOpen(true);
+      console.log('factions:', allFactions);
     };
 
     window.addEventListener('openChangeFactionDialog', handleOpenFactionDialog);
@@ -75,26 +88,28 @@ const FactionBoard: React.FC = () => {
   }, []);
 
   return (
-    <Box padding={2}>
+    <Box padding={2} sx={{ overflowX: 'auto' }}>
       <Typography variant="h4" gutterBottom>Faction Board</Typography>
       
       {currentFaction && (
-        <Board flipped={isFlipped} onClick={handleBoardClick}>
-          <BoardFace>
-            <img
-              src={`/assets/${currentFaction.factionBoardFrontImage}`}
-              alt="Faction Board Front"
-              style={{ width: '100%', height: 'auto' }}
-            />
-          </BoardFace>
-          <BoardFace back>
-            <img
-              src={`/assets/${currentFaction.factionBoardBackImage}`}
-              alt="Faction Board Back"
-              style={{ width: '100%', height: 'auto' }}
-            />
-          </BoardFace>
-        </Board>
+        <FlipCard onClick={handleFlip}>
+          <FlipCardInner flipped={isFlipped}>
+            <FlipCardFace front>
+              <img
+                src={`/assets/${allFactions.find(faction => faction.name === currentFaction)?.faction_board_front_image}`}
+                alt="Faction Board Front"
+                style={{ width: '100%', height: '100%' }}
+              />
+            </FlipCardFace>
+            <FlipCardFace>
+              <img
+                src={`/assets/${allFactions.find(faction => faction.name === currentFaction)?.faction_board_back_image}`}
+                alt="Faction Board Back"
+                style={{ width: '100%', height: '100%' }}
+              />
+            </FlipCardFace>
+          </FlipCardInner>
+        </FlipCard>
       )}
 
       {!currentFaction && (
@@ -131,13 +146,10 @@ const FactionBoard: React.FC = () => {
                   }}
                 >
                   <img
-                    src={`/assets/${faction.factionReferenceImage}`}
+                    src={`/assets/${faction.faction_reference_image}`}
                     alt={faction.name}
-                    style={{ width: '200px', height: 'auto' }}
+                    style={{ width: '250px', height: 'auto' }}
                   />
-                  <Typography align="center" sx={{ textTransform: 'capitalize' }}>
-                    {faction.name.replace(/_/g, ' ')}
-                  </Typography>
                 </Box>
               ))}
             </Box>
@@ -151,4 +163,4 @@ const FactionBoard: React.FC = () => {
   );
 };
 
-export default FactionBoard; // FIX IMAGES NOT SHOWING FOR CARDS
+export default FactionBoard;

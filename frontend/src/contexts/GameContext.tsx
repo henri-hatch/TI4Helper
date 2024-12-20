@@ -42,7 +42,7 @@ interface GameContextType {
   playerTechnologyCards: TechnologyCard[];
   setPlayerTechnologyCards: React.Dispatch<React.SetStateAction<TechnologyCard[]>>;
   updatePlayerTechnologyCardsHandler: (cardIds: number[]) => Promise<void>;
-  currentFaction: Faction | null;
+  currentFaction: string | null;
   allFactions: Faction[];
   updatePlayerFactionHandler: (factionName: string) => Promise<void>;
 }
@@ -87,7 +87,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [playerActionCards, setPlayerActionCards] = useState<ActionCard[]>([]);
   const [playerRelicCards, setPlayerRelicCards] = useState<RelicCard[]>([]);
   const [playerTechnologyCards, setPlayerTechnologyCards] = useState<TechnologyCard[]>([]);
-  const [currentFaction, setCurrentFaction] = useState<Faction | null>(null);
+  const [currentFaction, setCurrentFaction] = useState<string | null>(null);
   const [allFactions, setAllFactions] = useState<Faction[]>([]);
 
   useEffect(() => {
@@ -97,6 +97,14 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         const data = await apiFetchGameState();
         setGameState(data);
         console.log('Initial game state fetched:', data);
+
+        // Add the following lines to set currentFaction based on the current player's faction
+        if (playerId) {
+          const currentPlayer = data.players.find(p => p.playerId === playerId);
+          if (currentPlayer && currentPlayer.faction) {
+            setCurrentFaction(currentPlayer.faction);
+          }
+        }
       } catch (error) {
         console.error('Error fetching game state:', error);
       }
@@ -357,7 +365,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     try {
       await updatePlayerFaction(playerId, factionName);
       const faction = await fetchFaction(factionName);
-      setCurrentFaction(faction);
+      setCurrentFaction(faction.name);
       const updatedGameState = await apiFetchGameState();
       setGameState(updatedGameState);
     } catch (error) {

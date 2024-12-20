@@ -1,10 +1,9 @@
 // src/routes/routes.ts
-import { Application, RequestHandler, Request, Response, NextFunction } from 'express';
+import { Application, RequestHandler, Request, Response } from 'express';
 import { getDatabase } from '../models/database';
 import { Server } from 'socket.io';
 import { v4 as uuidv4 } from 'uuid';
 import os from 'os';
-import express from 'express';
 
 export const setupRoutes = (app: Application) => {
   // Health check route
@@ -38,6 +37,7 @@ export const setupRoutes = (app: Application) => {
             tradeGoods: p.trade_goods, // Mapping from snake_case to camelCase
             victoryPoints: p.victoryPoints,
             planets: [], // This will hold planet details including 'tapped'
+            faction: p.faction,
           };
         }
         if (p.planetId) {

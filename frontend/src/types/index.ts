@@ -11,6 +11,7 @@ export interface Player {
   tradeGoods: number;
   planets: PlayerPlanet[]; // Updated to include 'tapped' status
   victoryPoints: number;
+  faction: string | null;
 }
 
 // Represents a planet owned by a player with tapped status
@@ -97,8 +98,8 @@ export interface TechnologyCard {
 
 export interface Faction {
   name: string;
-  factionBoardFrontImage: string;
-  factionBoardBackImage: string;
-  factionReferenceImage: string;
-  factionTokenImage: string;
+  faction_board_front_image: string;
+  faction_board_back_image: string;
+  faction_reference_image: string;
+  faction_token_image: string;
 }
