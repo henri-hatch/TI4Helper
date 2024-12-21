@@ -41,10 +41,14 @@ const PlayerDashboard: React.FC = () => {
 
   // Existing handlers
   const handleChangeFaction = () => {
-    console.log('Change Faction clicked');
     const event = new CustomEvent('openChangeFactionDialog');
     window.dispatchEvent(event);
-    console.log('Event dispatched');
+    handleMenuClose();
+  };
+
+  const handleManageVehicles = () => {
+    const event = new CustomEvent('openManageVehiclesDialog');
+    window.dispatchEvent(event);
     handleMenuClose();
   };
 
@@ -143,7 +147,10 @@ const PlayerDashboard: React.FC = () => {
         onClose={handleMenuClose}
       >
         {currentTab === 0 && (
-          <MenuItem onClick={handleChangeFaction}>Change Faction</MenuItem>
+          <>
+            <MenuItem onClick={handleChangeFaction}>Change Faction</MenuItem>
+            <MenuItem onClick={handleManageVehicles}>Manage Vehicles</MenuItem>
+          </>
         )}
         {currentTab === 1 && (
           <MenuItem onClick={handleSelectPlanets}>Manage Planets</MenuItem>

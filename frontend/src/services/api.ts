@@ -212,3 +212,8 @@ export const fetchAllFactions = async (): Promise<Faction[]> => {
   const response = await api.get('/factions');
   return response.data.factions;
 };
+
+export const fetchVehicleCards = async (): Promise<TechnologyCard[]> => {
+  const response = await api.get('/vehicle-cards');
+  return response.data.cards;
+};

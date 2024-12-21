@@ -948,6 +948,17 @@ export const setupRoutes = (app: Application) => {
     }
   };
 
+  const fetchVehicleCards: RequestHandler = async (req, res) => {
+    try {
+      const db = getDatabase();
+      const cards = await db.all(`SELECT * FROM technology_cards WHERE type = 'vehicle'`);
+      res.status(200).json({ cards });
+    } catch (error) {
+      console.error('Error fetching vehicle cards:', error);
+      res.status(500).json({ error: 'Failed to fetch vehicle cards' });
+    }
+  };
+
   const updatePlayerFaction: RequestHandler = async (req, res) => {
     const { playerId, faction } = req.body;
     
@@ -1040,6 +1051,7 @@ export const setupRoutes = (app: Application) => {
   // Technology
   app.get('/api/technology-cards', fetchAllTechnologyCards);
   app.get('/api/player/:playerId/technology-cards', fetchPlayerTechnologyCards);
+  app.get('/api/vehicle-cards', fetchVehicleCards);
   app.post('/api/player/update-technology-cards', updatePlayerTechnologyCards);
   app.post('/api/technology-card/update-tapped', updateTechnologyCardTapped);
 
