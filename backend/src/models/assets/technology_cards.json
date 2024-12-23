@@ -102,10 +102,10 @@
         "image": "technology_cards/vehicle_upgrades/war_sun.jpg"
     },
     {
-        "name": "Genetic Recombobulation",
+        "name": "Genetic Recombination",
         "type": "action",
         "faction": "mahact_gene_sorcerers",
-        "image": "factions/mahact_gene_sorcerers/genetic_recombobulation.jpg"
+        "image": "factions/mahact_gene_sorcerers/genetic_recombination.jpg"
     },
     {
         "name": "Crimson Legionnaire II",

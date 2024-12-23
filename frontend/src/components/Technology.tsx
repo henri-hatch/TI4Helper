@@ -52,7 +52,8 @@ const TechnologyTab: React.FC = () => {
     setGameState,
     playerTechnologyCards,
     setPlayerTechnologyCards,
-    updatePlayerTechnologyCardsHandler 
+    updatePlayerTechnologyCardsHandler,
+    currentFaction
   } = useContext(GameContext);
 
   const [techContextMenu, setTechContextMenu] = useState<{
@@ -271,7 +272,7 @@ const TechnologyTab: React.FC = () => {
         </Typography>
         <Box display="flex" flexWrap="wrap" gap={2} marginTop={2}>
           {playerTechnologyCards
-            .filter(card => !['propulsion', 'warfare', 'biotic', 'cybernetic'].includes(card.faction))
+            .filter(card => card.faction === currentFaction && card.type !== 'vehicle')
             .map(card => (
               <Card
                 key={card.id}
@@ -281,7 +282,7 @@ const TechnologyTab: React.FC = () => {
                 onContextMenu={(e) => handleTechContextMenu(e, card.id)}
                 onTouchStart={(e) => handleTechTouchStart(e, card.id)}
                 onTouchEnd={handleTechTouchEnd}
-                sx={{ WebkitTouchCallout: 'none' }} // Prevent native touch menu
+                sx={{ WebkitTouchCallout: 'none' }}
               >
                 <img
                   src={`/assets/${card.image}`}
@@ -337,10 +338,11 @@ const TechnologyTab: React.FC = () => {
                 {allTechCards
                   .filter(card => 
                     card.name.toLowerCase().includes(techSearchQuery.toLowerCase()) &&
-                    card.type !== 'vehicle'
+                    card.type !== 'vehicle' &&
+                    (card.faction === currentFaction || ['propulsion', 'warfare', 'biotic', 'cybernetic'].includes(card.faction))
                   )
                   .map(card => (
-                    <Box key={card.id} position="relative" width="150px" textAlign="center"> // Changed from 100px
+                    <Box key={card.id} position="relative" width="150px" textAlign="center">
                       <Card
                         selected={selectedTechCardIds.includes(card.id)}
                         tapped={false}
