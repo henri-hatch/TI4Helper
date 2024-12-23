@@ -15,7 +15,6 @@ import {
   TextField,
 } from '@mui/material';
 import {
-  fetchAllTechnologyCards,
   fetchPlayerTechnologyCards,
   updatePlayerTechnologyCards,
   fetchVehicleCards,
@@ -24,7 +23,6 @@ import {
 import { TechnologyCard } from '../types';
 import { styled } from '@mui/material/styles';
 
-// Add styled components for flip animation
 const FlipCard = styled(Box)(({ theme }) => ({
   perspective: '1000px',
   width: '683px',
@@ -82,7 +80,6 @@ const FactionBoard: React.FC = () => {
     1: { top: 50, left: 100 },
     2: { top: 150, left: 200 },
     3: { top: 250, left: 300 },
-    // Add more default positions as needed
   };
 
   const handleFlip = () => {
@@ -218,8 +215,8 @@ const FactionBoard: React.FC = () => {
               position="absolute"
               top={position.top}
               left={position.left}
-              width="200px" // Adjust width for horizontal cards
-              sx={{ pointerEvents: 'none' }} // Make non-interactive
+              width="200px"
+              sx={{ pointerEvents: 'none' }}
               >
               <img
                 src={`/assets/${vehicle.image}`}
@@ -233,7 +230,6 @@ const FactionBoard: React.FC = () => {
         </FlipCard>
       )}
 
-      {/* Conditionally render the "No faction selected" message */}
       {!currentFaction && (
         <Typography>No faction selected. Use the menu to select a faction.</Typography>
       )}
