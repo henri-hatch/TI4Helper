@@ -74,6 +74,7 @@ const FactionBoard: React.FC = () => {
   const [allVehicleCards, setAllVehicleCards] = useState<TechnologyCard[]>([]);
   const [selectedVehicleIds, setSelectedVehicleIds] = useState<number[]>([]);
   const [vehicleSearchQuery, setVehicleSearchQuery] = useState<string>('');
+  const [tempSelectedVehicleIds, setTempSelectedVehicleIds] = useState<number[]>([]);
 
   // Define default positions for vehicles on the faction board
   const vehiclePositions: { [key: number]: { top: number; left: number } } = {
@@ -128,7 +129,7 @@ const FactionBoard: React.FC = () => {
     setVehicleLoading(true);
     try {
       const vehicleCards = await fetchVehicleCards();
-      const filteredVehicleCards = vehicleCards.filter(card => 
+      const filteredVehicleCards = vehicleCards.filter(card =>
         card.faction === 'none' || card.faction === currentFaction
       );
       setAllVehicleCards(filteredVehicleCards);
@@ -137,6 +138,7 @@ const FactionBoard: React.FC = () => {
         .filter(card => card.type === 'vehicle')
         .map(card => card.id);
       setSelectedVehicleIds(selectedVehicles);
+      setTempSelectedVehicleIds(selectedVehicles); // Pre-select
     } catch (error) {
       console.error('Error loading vehicle cards:', error);
     } finally {
@@ -144,8 +146,8 @@ const FactionBoard: React.FC = () => {
     }
   };
 
-  const toggleVehicleSelection = (cardId: number) => {
-    setSelectedVehicleIds(prev =>
+  const toggleTempVehicleSelection = (cardId: number) => {
+    setTempSelectedVehicleIds(prev =>
       prev.includes(cardId) ? prev.filter(id => id !== cardId) : [...prev, cardId]
     );
   };
@@ -154,10 +156,11 @@ const FactionBoard: React.FC = () => {
     if (!playerId) return;
     setVehicleLoading(true);
     try {
-      await updatePlayerTechnologyCards(playerId, selectedVehicleIds);
+      await updatePlayerTechnologyCards(playerId, tempSelectedVehicleIds);
       // Refresh the game state after updating vehicles
       const updatedGameState = await apiFetchGameState();
       setGameState(updatedGameState);
+      setSelectedVehicleIds(tempSelectedVehicleIds);
       setIsVehicleDialogOpen(false);
     } catch (error) {
       console.error('Error updating vehicle cards:', error);
@@ -166,19 +169,22 @@ const FactionBoard: React.FC = () => {
     }
   };
 
-  const handleManageVehicles = () => {
-    loadVehicleCards();
+  const handleManageVehicles = async () => {
+    await loadVehicleCards();
     setIsVehicleDialogOpen(true);
+  };
+
+  const handleCloseVehicleDialog = () => {
+    setIsVehicleDialogOpen(false);
+    setTempSelectedVehicleIds(selectedVehicleIds);
   };
 
   // **Added useEffect to Listen for currentFaction Changes**
   useEffect(() => {
-    if (isVehicleDialogOpen) {
+    if (playerId && currentFaction) {
       loadVehicleCards();
     }
-    // Clear selected vehicles when faction changes
-    setSelectedVehicleIds([]);
-  }, [currentFaction]);
+  }, [playerId, currentFaction, isVehicleDialogOpen]);
 
   return (
     <Box padding={2} sx={{ overflowX: 'auto' }}>
@@ -201,32 +207,33 @@ const FactionBoard: React.FC = () => {
                 style={{ width: '100%', height: '100%' }}
               />
             </FlipCardFace>
-          </FlipCardInner>
-          {/* Render Selected Vehicles */}
-          {selectedVehicleIds.map(cardId => {
+            {/* Render Selected Vehicles */}
+            {!isFlipped && selectedVehicleIds.map(cardId => {
             const vehicle = allVehicleCards.find(card => card.id === cardId);
             if (!vehicle) return null;
             const position = vehiclePositions[cardId] || { top: 0, left: 0 };
             return (
               <Box
-                key={cardId}
-                position="absolute"
-                top={position.top}
-                left={position.left}
-                width="200px" // Adjust width for horizontal cards
-                sx={{ pointerEvents: 'none' }} // Make non-interactive
+              key={cardId}
+              position="absolute"
+              top={position.top}
+              left={position.left}
+              width="200px" // Adjust width for horizontal cards
+              sx={{ pointerEvents: 'none' }} // Make non-interactive
               >
-                <img
-                  src={`/assets/${vehicle.image}`}
-                  alt={vehicle.name}
-                  style={{ width: '100%', height: 'auto', borderRadius: '4px' }}
-                />
+              <img
+                src={`/assets/${vehicle.image}`}
+                alt={vehicle.name}
+                style={{ width: '100%', height: 'auto', borderRadius: '4px' }}
+              />
               </Box>
             );
-          })}
+            })}
+          </FlipCardInner>
         </FlipCard>
       )}
 
+      {/* Conditionally render the "No faction selected" message */}
       {!currentFaction && (
         <Typography>No faction selected. Use the menu to select a faction.</Typography>
       )}
@@ -278,7 +285,7 @@ const FactionBoard: React.FC = () => {
       {/* Vehicles Management Dialog */}
       <Dialog
         open={isVehicleDialogOpen}
-        onClose={() => setIsVehicleDialogOpen(false)}
+        onClose={handleCloseVehicleDialog}
         maxWidth="md"
         fullWidth
       >
@@ -305,20 +312,41 @@ const FactionBoard: React.FC = () => {
                 {allVehicleCards
                   .filter(card => card.name.toLowerCase().includes(vehicleSearchQuery.toLowerCase()))
                   .map(card => (
-                    <Box key={card.id} position="relative" width="200px" textAlign="center">
+                    <Box
+                      key={card.id}
+                      position="relative"
+                      width="200px"
+                      textAlign="center"
+                      sx={{
+                        cursor: 'pointer',
+                        border: tempSelectedVehicleIds.includes(card.id) ? '2px solid #1976d2' : '2px solid transparent',
+                        borderRadius: '8px',
+                        transition: 'border 0.3s, transform 0.3s',
+                        '&:hover': {
+                          border: '2px solid #1976d2',
+                          transform: 'scale(1.05)',
+                        },
+                      }}
+                      onClick={() => toggleTempVehicleSelection(card.id)}
+                    >
                       <Checkbox
-                        checked={selectedVehicleIds.includes(card.id)}
-                        onChange={() => toggleVehicleSelection(card.id)}
-                        icon={<span />} // Hide default checkbox
-                        checkedIcon={<span />} // Hide default checkbox
-                        sx={{ position: 'absolute', top: 8, left: 8 }}
+                        checked={tempSelectedVehicleIds.includes(card.id)}
+                        onChange={() => toggleTempVehicleSelection(card.id)}
+                        sx={{
+                          position: 'absolute',
+                          top: 8,
+                          right: 8,
+                          zIndex: 2,
+                          '& .MuiSvgIcon-root': {
+                            borderRadius: '50%',
+                          },
+                        }}
                       />
                       <img
                         src={`/assets/${card.image}`}
                         alt={card.name}
-                        style={{ width: '100%', height: 'auto', borderRadius: '4px' }}
+                        style={{ width: '100%', height: 'auto', borderRadius: '4px', zIndex: 1 }}
                       />
-                      <Typography variant="body1">{card.name}</Typography>
                     </Box>
                   ))}
               </Box>
@@ -326,7 +354,7 @@ const FactionBoard: React.FC = () => {
           )}
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setIsVehicleDialogOpen(false)}>Cancel</Button>
+          <Button onClick={handleCloseVehicleDialog}>Cancel</Button>
           <Button
             variant="contained"
             onClick={handleConfirmVehicles}
