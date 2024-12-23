@@ -77,9 +77,18 @@ const FactionBoard: React.FC = () => {
   // Define default positions for vehicles on the faction board
   const vehiclePositions: { [key: number]: { top: number; left: number } } = {
     // cardId: position
-    1: { top: 50, left: 100 },
-    2: { top: 150, left: 200 },
-    3: { top: 250, left: 300 },
+    17: { top: 124, left: -11 },  // War Sun
+    10: { top: 124, left: 158 },  // Cruiser
+    12: { top: 238, left: -11 },  // Dreadnought
+    9: { top: 351, left: -11 },   // Carrier
+    11: { top: 238, left: 158 },  // Destroyer
+    13: { top: 351, left: 158 },  // Fighter
+    15: { top: 238, left: 326 },  // PDS
+    14: { top: 351, left: 326 },  // Infantry
+    16: { top: 351, left: 495 },  // Space Dock
+
+    // Faction Specific
+    19: { top: 351, left: 326 },  // MGS - Crimson Legionnaire
   };
 
   const handleFlip = () => {
@@ -221,7 +230,7 @@ const FactionBoard: React.FC = () => {
               <img
                 src={`/assets/${vehicle.image}`}
                 alt={vehicle.name}
-                style={{ width: '100%', height: 'auto', borderRadius: '4px' }}
+                style={{ width: '153px', height: '100px', borderRadius: '4px' }}
               />
               </Box>
             );
