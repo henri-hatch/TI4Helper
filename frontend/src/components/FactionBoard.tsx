@@ -74,7 +74,7 @@ const FactionBoard: React.FC = () => {
   const [vehicleSearchQuery, setVehicleSearchQuery] = useState<string>('');
   const [tempSelectedVehicleIds, setTempSelectedVehicleIds] = useState<number[]>([]);
 
-  // Define default positions for vehicles on the faction board
+  // Define default positions for vehicles on the faction board - May want to change to a map later instead of manual
   const vehiclePositions: { [key: number]: { top: number; left: number } } = {
     // cardId: position
     17: { top: 124, left: -11 },  // War Sun
