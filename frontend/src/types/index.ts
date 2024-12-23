@@ -37,15 +37,6 @@ export interface DashboardPlanet extends Planet {
   attachments?: ExplorationCard[]; // Optional property
 }
 
-// Represents a public or secret objective
-export interface Objective {
-  id: number;
-  description: string;
-  type: 'public' | 'secret';
-  points: number;
-  completedBy?: number; // Player ID who completed the objective
-}
-
 // Represents the full game state
 export interface GameState {
   players: Player[];
@@ -102,4 +93,16 @@ export interface Faction {
   faction_board_back_image: string;
   faction_reference_image: string;
   faction_token_image: string;
+}
+
+export interface Objective {
+  id: number;
+  name: string
+  type: 'public' | 'secret';
+  points: number;
+  image: string;
+}
+
+export interface DashboardObjective extends Objective {
+  completed: boolean;
 }

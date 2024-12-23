@@ -1,6 +1,6 @@
 // src/services/api.ts
 import axios from 'axios';
-import { GameState, PlayerJoinResponse, Planet, ExplorationCard, StrategyCard, ActionCard, RelicCard, TechnologyCard, Faction } from '../types';
+import { GameState, PlayerJoinResponse, Planet, ExplorationCard, StrategyCard, ActionCard, RelicCard, TechnologyCard, Faction, Objective, DashboardObjective } from '../types';
 
 // Dynamically set the backend URL based on the current window location
 const BACKEND_PORT = '5000'; // Ensure this matches your backend's port
@@ -216,4 +216,22 @@ export const fetchAllFactions = async (): Promise<Faction[]> => {
 export const fetchVehicleCards = async (): Promise<TechnologyCard[]> => {
   const response = await api.get('/vehicle-cards');
   return response.data.cards;
+};
+
+export const fetchAllObjectives = async (): Promise<Objective[]> => {
+  const response = await api.get('/objectives');
+  return response.data.objectives;
+};
+
+export const fetchPlayerObjectives = async (playerId: string): Promise<DashboardObjective[]> => {
+  const response = await api.get(`/player/${playerId}/objectives`);
+  return response.data.objectives;
+};
+
+export const updatePlayerObjectives = async (playerId: string, type: 'public' | 'secret', objectiveIds: number[]): Promise<void> => {
+  await api.post('/player/update-objectives', { playerId, type, objectiveIds });
+};
+
+export const toggleObjectiveCompleted = async (playerId: string, objectiveId: number): Promise<void> => {
+  await api.post('/objective/toggle-completed', { playerId, objectiveId });
 };

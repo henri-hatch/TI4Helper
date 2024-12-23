@@ -52,6 +52,18 @@ const PlayerDashboard: React.FC = () => {
     handleMenuClose();
   };
 
+  const handleManagePublicObjectives = () => {
+    const event = new CustomEvent('openManagePublicObjectivesDialog');
+    window.dispatchEvent(event);
+    handleMenuClose();
+  };
+
+  const handleManageSecretObjectives = () => {
+    const event = new CustomEvent('openManageSecretObjectivesDialog');
+    window.dispatchEvent(event);
+    handleMenuClose();
+  };
+
   const handleSelectPlanets = () => {
     const event = new CustomEvent('openSelectPlanetsDialog');
     window.dispatchEvent(event);
@@ -154,6 +166,12 @@ const PlayerDashboard: React.FC = () => {
         )}
         {currentTab === 1 && (
           <MenuItem onClick={handleSelectPlanets}>Manage Planets</MenuItem>
+        )}
+        {currentTab === 2 && (
+          <>
+            <MenuItem onClick={handleManagePublicObjectives}>Manage Public Objectives</MenuItem>
+            <MenuItem onClick={handleManageSecretObjectives}>Manage Secret Objectives</MenuItem>
+          </>
         )}
         {currentTab === 3 && (
           <MenuItem onClick={handleManageTechnology}>Manage Technology</MenuItem>

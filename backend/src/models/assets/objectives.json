@@ -1,0 +1,50 @@
+[
+    {
+        "name": "Amass Wealth",
+        "type": "public",
+        "points": 1,
+        "image": "objectives/public/amass_wealth.jpg"
+    },
+    {
+        "name": "Build Defenses",
+        "type": "public",
+        "points": 1,
+        "image": "objectives/public/build_defenses.jpg"
+    },
+    {
+        "name": "Achieve Supremacy",
+        "type": "public",
+        "points": 2,
+        "image": "objectives/public/achieve_supremacy.jpg"
+    },
+    {
+        "name": "Become a Legend",
+        "type": "public",
+        "points": 2,
+        "image": "objectives/public/become_a_legend.jpg"
+    },
+    {
+        "name": "Adapt New Strategies",
+        "type": "secret",
+        "points": 1,
+        "image": "objectives/secret/adapt_new_strategies.jpg"
+    },
+    {
+        "name": "Become a Martyr",
+        "type": "secret",
+        "points": 1,
+        "image": "objectives/secret/become_a_martyr.jpg"
+    },
+    {
+        "name": "Become the Gatekeeper",
+        "type": "secret",
+        "points": 1,
+        "image": "objectives/secret/become_the_gatekeeper.jpg"
+    },
+    {
+        "name": "Betray a Friend",
+        "type": "secret",
+        "points": 1,
+        "image": "objectives/secret/betray_a_friend.jpg"
+    }
+]

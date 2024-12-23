@@ -1,7 +1,7 @@
 // src/contexts/GameContext.tsx
 import React, { createContext, useState, useEffect, ReactNode } from 'react';
-import { GameState, Player, Planet, Objective, PlayerJoinResponse, PlayerPlanet, ExplorationCard, StrategyCard, ActionCard, RelicCard, TechnologyCard, Faction } from '../types';
-import { fetchGameState as apiFetchGameState, joinGame, fetchPlanets, assignPlanetsToPlayer, updatePlanetTapped as apiUpdatePlanetTapped, explorePlanet as apiExplorePlanet, fetchPlanetAttachments, fetchPlayerExplorationCards, fetchAllExplorationCards, updatePlayerExplorationCards, fetchPlayerStrategyCards, fetchPlayerActionCards, updatePlayerActionCards, fetchAllActionCards, fetchPlayerRelicCards, updatePlayerRelicCards, combineRelicFragments as apiCombineRelicFragments, updatePlayerTechnologyCards, fetchPlayerTechnologyCards, updatePlayerFaction, fetchFaction, fetchAllFactions } from '../services/api';
+import { GameState, Player, Planet, Objective, PlayerJoinResponse, PlayerPlanet, ExplorationCard, StrategyCard, ActionCard, RelicCard, TechnologyCard, Faction, DashboardObjective } from '../types';
+import { fetchGameState as apiFetchGameState, joinGame, fetchPlanets, assignPlanetsToPlayer, updatePlanetTapped as apiUpdatePlanetTapped, explorePlanet as apiExplorePlanet, fetchPlanetAttachments, fetchPlayerExplorationCards, fetchAllExplorationCards, updatePlayerExplorationCards, fetchPlayerStrategyCards, fetchPlayerActionCards, updatePlayerActionCards, fetchAllActionCards, fetchPlayerRelicCards, updatePlayerRelicCards, combineRelicFragments as apiCombineRelicFragments, updatePlayerTechnologyCards, fetchPlayerTechnologyCards, updatePlayerFaction, fetchFaction, fetchAllFactions, fetchPlayerObjectives, updatePlayerObjectives } from '../services/api';
 import socket from '../services/socket';
 import axios from 'axios';
 
@@ -45,6 +45,9 @@ interface GameContextType {
   currentFaction: string | null;
   allFactions: Faction[];
   updatePlayerFactionHandler: (factionName: string) => Promise<void>;
+  playerObjectives: DashboardObjective[];
+  setPlayerObjectives: React.Dispatch<React.SetStateAction<DashboardObjective[]>>;
+  updatePlayerObjectivesHandler: (type: 'public' | 'secret', objectiveIds: number[]) => Promise<void>;
 }
 
 export const GameContext = createContext<GameContextType>({
@@ -75,6 +78,9 @@ export const GameContext = createContext<GameContextType>({
   currentFaction: null,
   allFactions: [],
   updatePlayerFactionHandler: async () => {},
+  playerObjectives: [],
+  setPlayerObjectives: () => {},
+  updatePlayerObjectivesHandler: async () => {},
 });
 
 export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
@@ -89,6 +95,7 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [playerTechnologyCards, setPlayerTechnologyCards] = useState<TechnologyCard[]>([]);
   const [currentFaction, setCurrentFaction] = useState<string | null>(null);
   const [allFactions, setAllFactions] = useState<Faction[]>([]);
+  const [playerObjectives, setPlayerObjectives] = useState<DashboardObjective[]>([]);
 
   useEffect(() => {
     // Fetch initial game state
@@ -188,6 +195,9 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         .catch(console.error);
       fetchPlayerTechnologyCards(playerId)
         .then(setPlayerTechnologyCards)
+        .catch(console.error);
+      fetchPlayerObjectives(playerId)
+        .then(setPlayerObjectives)
         .catch(console.error);
       apiFetchGameState()
         .then(setGameState)
@@ -373,6 +383,19 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
+  const updatePlayerObjectivesHandler = async (type: 'public' | 'secret', objectiveIds: number[]) => {
+    if (!playerId) return;
+    try {
+      await updatePlayerObjectives(playerId, type, objectiveIds);
+      const updatedObjectives = await fetchPlayerObjectives(playerId);
+      setPlayerObjectives(updatedObjectives);
+      const updatedGameState = await apiFetchGameState();
+      setGameState(updatedGameState);
+    } catch (error) {
+      console.error('Error updating player objectives:', error);
+    }
+  };
+
   return (
     <GameContext.Provider
       value={{
@@ -403,6 +426,9 @@ export const GameProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         currentFaction,
         allFactions,
         updatePlayerFactionHandler,
+        playerObjectives,
+        setPlayerObjectives,
+        updatePlayerObjectivesHandler,
       }}
     >
       {children}

@@ -1000,6 +1000,90 @@ export const setupRoutes = (app: Application) => {
     }
   };
 
+  const fetchAllObjectives: RequestHandler = async (req, res) => {
+    try {
+      const db = getDatabase();
+      const objectives = await db.all('SELECT * FROM objectives');
+      res.status(200).json({ objectives });
+    } catch (error) {
+      console.error('Error fetching objectives:', error);
+      res.status(500).json({ error: 'Failed to fetch objectives' });
+    }
+  };
+
+  const fetchPlayerObjectives: RequestHandler = async (req, res) => {
+    const { playerId } = req.params;
+    try {
+      const db = getDatabase();
+      // Pull 'completed' from the player_objectives table
+      const rows = await db.all(
+        `SELECT o.id,
+                o.name,
+                o.type,
+                o.points,
+                o.image,
+                po.completed AS completed
+         FROM objectives o
+         INNER JOIN player_objectives po
+           ON o.id = po.objectiveId
+         WHERE po.playerId = ?`,
+        playerId
+      );
+      // Convert integer->boolean if necessary
+      const objectives = rows.map(row => ({
+        ...row,
+        completed: row.completed === 1,
+      }));
+      res.status(200).json({ objectives });
+    } catch (error) {
+      console.error('Error fetching player objectives:', error);
+      res.status(500).json({ error: 'Failed to fetch player objectives' });
+    }
+  };
+
+  const updatePlayerObjectives: RequestHandler = async (req, res) => {
+    const { playerId, objectiveIds } = req.body;
+    
+    const db = getDatabase();
+    try {
+      await db.run('BEGIN TRANSACTION');
+      await db.run('DELETE FROM player_objectives WHERE playerId = ?', playerId);
+      
+      const stmt = await db.prepare(
+        'INSERT INTO player_objectives (playerId, objectiveId) VALUES (?, ?)'
+      );
+      for (const objectiveId of objectiveIds) {
+        await stmt.run(playerId, objectiveId);
+      }
+      await stmt.finalize();
+      
+      await db.run('COMMIT');
+      res.status(200).json({ message: 'Objectives updated' });
+    } catch (error) {
+      await db.run('ROLLBACK');
+      console.error('Error updating objectives:', error);
+      res.status(500).json({ error: 'Failed to update objectives' });
+    }
+  };
+
+  const toggleObjectiveCompleted: RequestHandler = async (req, res) => {
+    const { playerId, objectiveId, completed } = req.body;
+    
+    try {
+      const db = getDatabase();
+      await db.run(
+        `UPDATE player_objectives 
+         SET completed = ? 
+         WHERE playerId = ? AND objectiveId = ?`,
+        completed, playerId, objectiveId
+      );
+      res.status(200).json({ message: 'Objective completion status updated' });
+    } catch (error) {
+      console.error('Error updating objective completion status:', error);
+      res.status(500).json({ error: 'Failed to update objective completion status' });
+    }
+  };
+
   // Register routes
 
   // Health check
@@ -1059,4 +1143,10 @@ export const setupRoutes = (app: Application) => {
   app.post('/api/player/update-faction', updatePlayerFaction);
   app.get('/api/faction/:factionName', fetchFaction);
   app.get('/api/factions', getAllFactions);
+
+  // Objectives
+  app.get('/api/objectives', fetchAllObjectives);
+  app.get('/api/player/:playerId/objectives', fetchPlayerObjectives);
+  app.post('/api/player/update-objectives', updatePlayerObjectives);
+  app.post('/api/objective/toggle-completed', toggleObjectiveCompleted);
 };

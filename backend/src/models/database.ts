@@ -26,13 +26,6 @@ export const initializeDatabase = async () => {
       faction TEXT
     );
 
-    CREATE TABLE IF NOT EXISTS objectives (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      description TEXT NOT NULL,
-      type TEXT NOT NULL CHECK (type IN ('public', 'secret')),
-      points INTEGER NOT NULL
-    );
-
     CREATE TABLE IF NOT EXISTS planets (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       name TEXT UNIQUE NOT NULL,
@@ -157,6 +150,23 @@ export const initializeDatabase = async () => {
       faction_reference_image TEXT NOT NULL,
       faction_token_image TEXT NOT NULL
     );
+
+    CREATE TABLE IF NOT EXISTS objectives (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL,
+      type TEXT CHECK (type IN ('public', 'secret')),
+      points INTEGER NOT NULL,
+      image TEXT NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS player_objectives (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      playerId TEXT NOT NULL,
+      objectiveId INTEGER NOT NULL,
+      completed BOOLEAN DEFAULT FALSE,
+      FOREIGN KEY (playerId) REFERENCES players(playerId),
+      FOREIGN KEY (objectiveId) REFERENCES objectives(id)
+    );
   `);
 
   // Check if tables are empty before initializing
@@ -170,6 +180,7 @@ export const initializeDatabase = async () => {
     await initializeRelicCards();
     await initializeTechnologyCards();
     await initializeFactions();
+    await initializeObjectives();
   } else {
     console.log('Existing game found. Database already initialized.');
     console.log('Getting previous game...');
@@ -442,6 +453,45 @@ interface FactionInput {
   faction_board_back_image: string;
   faction_reference_image: string;
   faction_token_image: string;
+}
+
+// Initialize objectives
+export const initializeObjectives = async () => {
+  try {
+    const db = getDatabase();
+    const objectivesPath = path.join(__dirname, 'assets', 'objectives.json');
+    const data = await fs.readFile(objectivesPath, 'utf-8');
+    const objectives: ObjectiveInput[] = JSON.parse(data);
+
+    for (const objective of objectives) {
+      const existing = await db.get(`SELECT id FROM objectives WHERE name = ?`, objective.name);
+      if (!existing) {
+        await db.run(
+          `INSERT INTO objectives (name, type, points, image) 
+           VALUES (?, ?, ?, ?)`,
+          objective.name,
+          objective.type,
+          objective.points,
+          objective.image
+        );
+        console.log(`Inserted objectives: ${objective.name}`);
+      } else {
+        console.log(`Objective already exists: ${objective.name}`);
+      }
+    }
+
+    console.log("Objectives initialized.");
+  } catch (error) {
+    console.error('Error initializing objectives:', error);
+  }
+};
+
+// Define ObjectiveInput interface
+interface ObjectiveInput {
+  name: string;
+  type: string; // 'public', 'secret'
+  points: number;
+  image: string;
 }
 
 export const getDatabase = (): Database<sqlite3.Database, sqlite3.Statement> => {
