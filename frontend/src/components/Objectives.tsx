@@ -29,8 +29,8 @@ const Card = styled(Box)<{ selected: boolean; completed: boolean }>(({ theme, se
   border: selected ? '2px solid #1976d2' : '2px solid transparent',
   borderRadius: '8px',
   padding: '10px',
-  width: '200px',
-  height: '300px',
+  width: '100px',
+  height: '150px',
   cursor: 'pointer',
   filter: completed ? 'grayscale(100%)' : 'none',
   '&:hover': {
@@ -116,7 +116,12 @@ const Objectives: React.FC = () => {
     if (!playerId) return;
     setObjectiveLoading(true);
     try {
-      await updatePlayerObjectivesHandler(type, selectedObjectiveIds);
+      // Get current selected objective IDs only for the current type
+      const currentTypeObjectives = allObjectives.filter(obj => 
+        obj.type === type && selectedObjectiveIds.includes(obj.id)
+      ).map(obj => obj.id);
+
+      await updatePlayerObjectivesHandler(type, currentTypeObjectives);
       if (type === 'public') {
         setPublicObjectivesOpen(false);
       } else {
@@ -171,7 +176,7 @@ const Objectives: React.FC = () => {
                 <img
                   src={`/assets/${objective.image}`}
                   alt={objective.name}
-                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                  style={{ width: '100px', height: '150px', objectFit: 'cover' }}
                 />
               </Card>
             ))}
@@ -204,7 +209,7 @@ const Objectives: React.FC = () => {
                 <img
                   src={`/assets/${objective.image}`}
                   alt={objective.name}
-                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                  style={{ width: '100px', height: '150px', objectFit: 'cover' }}
                 />
               </Card>
             ))}

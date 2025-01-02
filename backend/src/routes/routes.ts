@@ -1042,28 +1042,37 @@ export const setupRoutes = (app: Application) => {
   };
 
   const updatePlayerObjectives: RequestHandler = async (req, res) => {
-    const { playerId, objectiveIds } = req.body;
-    
-    const db = getDatabase();
-    try {
-      await db.run('BEGIN TRANSACTION');
-      await db.run('DELETE FROM player_objectives WHERE playerId = ?', playerId);
+      const { playerId, type, objectiveIds } = req.body;
       
-      const stmt = await db.prepare(
-        'INSERT INTO player_objectives (playerId, objectiveId) VALUES (?, ?)'
-      );
-      for (const objectiveId of objectiveIds) {
-        await stmt.run(playerId, objectiveId);
+      const db = getDatabase();
+      try {
+        await db.run('BEGIN TRANSACTION');
+        // Only delete objectives of the specified type
+        await db.run(
+          `DELETE FROM player_objectives 
+          WHERE playerId = ? 
+          AND objectiveId IN (
+            SELECT id FROM objectives WHERE type = ?
+          )`, 
+          playerId, 
+          type
+        );
+        
+        const stmt = await db.prepare(
+          'INSERT INTO player_objectives (playerId, objectiveId) VALUES (?, ?)'
+        );
+        for (const objectiveId of objectiveIds) {
+          await stmt.run(playerId, objectiveId);
+        }
+        await stmt.finalize();
+        
+        await db.run('COMMIT');
+        res.status(200).json({ message: 'Objectives updated' });
+      } catch (error) {
+        await db.run('ROLLBACK');
+        console.error('Error updating objectives:', error);
+        res.status(500).json({ error: 'Failed to update objectives' });
       }
-      await stmt.finalize();
-      
-      await db.run('COMMIT');
-      res.status(200).json({ message: 'Objectives updated' });
-    } catch (error) {
-      await db.run('ROLLBACK');
-      console.error('Error updating objectives:', error);
-      res.status(500).json({ error: 'Failed to update objectives' });
-    }
   };
 
   const toggleObjectiveCompleted: RequestHandler = async (req, res) => {
